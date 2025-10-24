@@ -1,0 +1,120 @@
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Координаты для телепортации
+local LOCATIONS = {
+    {name = "Rock", coords = Vector3.new(458, 250, 889)},
+    {name = "Crystal", coords = Vector3.new(409, 271, 978)},
+    {name = "Blue God Star", coords = Vector3.new(1176, 4789, -2293)},
+    {name = "Green God Star", coords = Vector3.new(1381, 9274, 1647)},
+    {name = "Red God Star", coords = Vector3.new(-369, 15735, -9)}
+}
+
+-- Функция для преобразования строковых значений в числа
+local function parseStatValue(valueStr)
+    if valueStr == "N/A" then return 0 end
+    
+    valueStr = string.gsub(valueStr:lower(), " ", "")
+    
+    local multipliers = {
+        k = 1000,
+        m = 1000000,
+        b = 1000000000,
+        t = 1000000000000
+    }
+    
+    local numberPart = tonumber(valueStr)
+    if numberPart then return numberPart end
+    
+    for suffix, multiplier in pairs(multipliers) do
+        local match = string.match(valueStr, "([%d%.]+)" .. suffix)
+        if match then
+            return tonumber(match) * multiplier
+        end
+    end
+    
+    return tonumber(valueStr) or 0
+end
+
+-- Функция для получения значения статистики
+local function getValueFromText(textObject)
+    local success, result = pcall(function()
+        local text = textObject.Text
+        local parts = {}
+        for part in string.gmatch(text, "[^:]+") do
+            table.insert(parts, part:match("^%s*(.-)%s*$"))
+        end
+        return #parts >= 2 and parts[2] or text
+    end)
+    return success and result or "N/A"
+end
+
+-- Функция для получения Fist Strength как числа
+local function getFistStrengthNumber()
+    local fsText = getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.FSTxt)
+    return parseStatValue(fsText)
+end
+
+-- Функция для телепортации
+local function teleportToLocation(coords)
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        plr.Character.HumanoidRootPart.CFrame = CFrame.new(coords)
+    end
+end
+
+-- Функция для автоматической телепортации на основе FS
+local function autoTeleportByFS()
+    local fsValue = getFistStrengthNumber()
+    
+    if fsValue >= 10000000000000 then
+        teleportToLocation(LOCATIONS[5].coords)
+    elseif fsValue >= 100000000000 then
+        teleportToLocation(LOCATIONS[4].coords)
+    elseif fsValue >= 1000000000 then
+        teleportToLocation(LOCATIONS[3].coords)
+    elseif fsValue >= 1000 then
+        teleportToLocation(LOCATIONS[2].coords)
+    elseif fsValue >= 100 then
+        teleportToLocation(LOCATIONS[1].coords)
+    end
+end
+
+-- Переменные для фарма
+local farmfistactive = true
+
+-- Немедленная телепортация при запуске
+autoTeleportByFS()
+
+-- Основной цикл фарма FS
+spawn(function()
+    while true do
+        if farmfistactive and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local humanoid = plr.Character.Humanoid
+            local backpack = plr.Backpack
+            
+            local tool = backpack:FindFirstChildOfClass("Tool") or plr.Character:FindFirstChildOfClass("Tool")
+            
+            if tool then
+                humanoid:EquipTool(tool)
+                
+                while farmfistactive and plr.Character and plr.Character:FindFirstChild("Humanoid") do
+                    ReplicatedStorage.RemoteEvent:FireServer({[1] = "Click"})
+                    pcall(function() tool:Activate() end)
+                    task.wait()
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Автоматическая проверка каждые 10 секунд
+spawn(function()
+    while true do
+        task.wait(10)
+        autoTeleportByFS()
+    end
+end)
+
+print("Auto-teleport and FS Farm system loaded!")
