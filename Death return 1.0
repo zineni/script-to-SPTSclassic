@@ -1,0 +1,77 @@
+-- Death Return System
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
+local deathreturnactive = true
+local playerdied = false
+local lastlocationx, lastlocationy, lastlocationz
+
+local plr = Players.LocalPlayer
+
+-- Анти-афк
+local VirtualUser = game:service'VirtualUser'
+game:service'Players'.LocalPlayer.Idled:connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+-- Основная функция возврата на место смерти
+spawn(function()
+    while true do
+        if deathreturnactive then
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+                plr.Character.Humanoid.Died:connect(function()
+                    playerdied = true
+                end)
+            end
+        end
+        
+        if not playerdied and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            lastlocationx = plr.Character.HumanoidRootPart.Position.x
+            lastlocationy = plr.Character.HumanoidRootPart.Position.y
+            lastlocationz = plr.Character.HumanoidRootPart.Position.z
+            wait(0.5)
+        end
+        
+        if playerdied then
+            ReplicatedStorage.RemoteEvent:FireServer({[1] = "Respawn"})
+            wait(2.6)
+            
+            -- Ждем появления нового персонажа
+            repeat 
+                wait(0.4) 
+            until plr.Character and plr.Character:FindFirstChild("Humanoid")
+            
+            if deathreturnactive and plr.Character:FindFirstChild("HumanoidRootPart") then
+                plr.Character.HumanoidRootPart.CFrame = CFrame.new(lastlocationx, lastlocationy, lastlocationz)
+            end    
+            
+            -- Отключаем визуальные эффекты
+            Lighting.Blur.Enabled = false
+            if plr.PlayerGui:FindFirstChild("IntroGui") then
+                plr.PlayerGui.IntroGui.Enabled = false
+            end
+            if plr.PlayerGui:FindFirstChild("ScreenGui") then
+                plr.PlayerGui.ScreenGui.Enabled = true
+            end
+            
+            playerdied = false
+        end
+        
+        wait(0.2)
+    end        
+end)
+
+-- Команда для включения/выключения через чат
+local function onPlayerChatted(message)
+    if message == "/e dp" then
+        deathreturnactive = not deathreturnactive
+        print("Death return: " .. (deathreturnactive and "ON" or "OFF"))
+    end
+end
+
+-- Обработчик чата
+plr.Chatted:Connect(onPlayerChatted)
+
+print("Death Return System loaded! Use /e dp to toggle")
