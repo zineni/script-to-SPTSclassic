@@ -333,6 +333,542 @@ spawn(function()
     end
 end)
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local plr = Players.LocalPlayer
+
+-- Таблицы для хранения статистики
+local startStats = {}
+local endStats = {}
+local trackingActive = false
+
+-- Функция для получения только значения (третья часть строки)
+local function getValueFromText(textObject)
+    local success, result = pcall(function()
+        local text = textObject.Text -- "Psychic Power : 1.21K"
+        -- Разделяем строку по двоеточию и пробелам, берем третью часть
+        local parts = {}
+        for part in string.gmatch(text, "[^:]+") do
+            table.insert(parts, part:match("^%s*(.-)%s*$"))
+        end
+        
+        if #parts >= 2 then
+            return parts[2] -- Возвращаем "1.21K"
+        else
+            return text -- Если не удалось разделить, возвращаем исходный текст
+        end
+    end)
+    
+    if success and result then
+        return result
+    else
+        return "N/A"
+    end
+end
+
+-- Функции для каждой статистики
+local function getFistStrength()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.FSTxt)
+end
+
+local function getPsychicPower()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.PPTxt)
+end
+
+local function getJumpForce()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.JFTxt)
+end
+
+local function getMovementSpeed()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.MSTxt)
+end
+
+local function getBodyToughness()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.BTTxt)
+end
+
+-- Функция для получения всех статистик в таблицу
+local function getAllStats()
+    return {
+        FistStrength = getFistStrength(),
+        PsychicPower = getPsychicPower(),
+        JumpForce = getJumpForce(),
+        MovementSpeed = getMovementSpeed(),
+        BodyToughness = getBodyToughness()
+    }
+end
+
+-- Функция для преобразования строковых значений в числа
+local function parseStatValue(valueStr)
+    if valueStr == "N/A" then return 0 end
+    
+    valueStr = string.gsub(valueStr:lower(), " ", "")
+    
+    local multipliers = {
+        k = 1000,
+        m = 1000000,
+        b = 1000000000,
+        t = 1000000000000
+    }
+    
+    local numberPart = tonumber(valueStr)
+    if numberPart then return numberPart end
+    
+    for suffix, multiplier in pairs(multipliers) do
+        local match = string.match(valueStr, "([%d%.]+)" .. suffix)
+        if match then
+            return tonumber(match) * multiplier
+        end
+    end
+    
+    return tonumber(valueStr) or 0
+end
+
+-- Функция для форматирования разницы (с цветом и знаком)
+local function formatDifference(startVal, endVal)
+    local startNum = parseStatValue(startVal)
+    local endNum = parseStatValue(endVal)
+    local difference = endNum - startNum
+    
+    -- Функция для форматирования числа (локальная)
+    local function formatDiffNumber(num)
+        local absNum = math.abs(num)
+        
+        if absNum >= 1000000000000 then
+            return string.format("%.2fT", num / 1000000000000)
+        elseif absNum >= 1000000000 then
+            return string.format("%.2fB", num / 1000000000)
+        elseif absNum >= 1000000 then
+            return string.format("%.2fM", num / 1000000000)
+        elseif absNum >= 1000 then
+            return string.format("%.2fK", num / 1000)
+        else
+            return tostring(math.floor(num))
+        end
+    end
+    
+    if difference == 0 then
+        return "0", Color3.new(1, 1, 1) -- Белый
+    elseif difference > 0 then
+        return "+" .. formatDiffNumber(difference), Color3.new(0, 1, 0) -- Зеленый
+    else
+        return formatDiffNumber(difference), Color3.new(1, 0, 0) -- Красный
+    end
+end
+
+-- Функция для форматирования чисел (K, M, B, T)
+local function formatNumber(num)
+    local absNum = math.abs(num)
+    
+    if absNum >= 1000000000000 then
+        return string.format("%.2fT", num / 1000000000000)
+    elseif absNum >= 1000000000 then
+        return string.format("%.2fB", num / 1000000000)
+    elseif absNum >= 1000000 then
+        return string.format("%.2fM", num / 1000000)
+    elseif absNum >= 1000 then
+        return string.format("%.2fK", num / 1000)
+    else
+        return tostring(math.floor(num))
+    end
+end
+
+-- Функция для форматирования времени
+local function formatTime(seconds)
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    
+    if hours > 0 then
+        return string.format("%02d:%02d:%02d", hours, minutes, secs)
+    else
+        return string.format("%02d:%02d", minutes, secs)
+    end
+end
+
+-- Создание GUI для отслеживания прогресса
+local function createProgressGUI()
+    -- Удаляем старую панель если существует
+    if plr.PlayerGui:FindFirstChild("ProgressGUI") then
+        plr.PlayerGui.ProgressGUI:Destroy()
+    end
+
+    -- Создаем основной GUI
+    local ProgressGUI = Instance.new("ScreenGui")
+    ProgressGUI.Parent = plr.PlayerGui
+    ProgressGUI.Name = "ProgressGUI"
+    ProgressGUI.ResetOnSpawn = false
+
+    -- Основной фрейм
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Parent = ProgressGUI
+    MainFrame.Size = UDim2.new(0, 400, 0, 500)
+    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+    MainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+    MainFrame.BackgroundTransparency = 0.15
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Visible = false
+
+    -- Закругление основного фрейма
+    local UICorner = Instance.new("UICorner")
+    UICorner.Parent = MainFrame
+    UICorner.CornerRadius = UDim.new(0, 12)
+
+    -- Тень/обводка
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Parent = MainFrame
+    UIStroke.Color = Color3.new(1, 1, 1)
+    UIStroke.Thickness = 2
+    UIStroke.Transparency = 0.7
+
+    -- Заголовок
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = MainFrame
+    TitleLabel.Size = UDim2.new(1, 0, 0, 60)
+    TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+    TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+    TitleLabel.BackgroundTransparency = 0.3
+    TitleLabel.Text = "ОТСЛЕЖИВАНИЕ ПРОГРЕССА"
+    TitleLabel.TextColor3 = Color3.new(1, 1, 1)
+    TitleLabel.TextSize = 20
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.BorderSizePixel = 0
+
+    -- Закругление заголовка
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.Parent = TitleLabel
+    TitleCorner.CornerRadius = UDim.new(0, 12)
+
+    -- Информация о времени
+    local TimeInfo = Instance.new("TextLabel")
+    TimeInfo.Parent = MainFrame
+    TimeInfo.Size = UDim2.new(1, -20, 0, 40)
+    TimeInfo.Position = UDim2.new(0, 10, 0, 65)
+    TimeInfo.BackgroundTransparency = 1
+    TimeInfo.Text = "Время: 00:00"
+    TimeInfo.TextColor3 = Color3.new(1, 1, 1)
+    TimeInfo.TextSize = 16
+    TimeInfo.TextXAlignment = Enum.TextXAlignment.Left
+    TimeInfo.Font = Enum.Font.Gotham
+    TimeInfo.Name = "TimeInfo"
+
+    -- Статус отслеживания
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Parent = MainFrame
+    StatusLabel.Size = UDim2.new(1, -20, 0, 30)
+    StatusLabel.Position = UDim2.new(0, 10, 0, 105)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Text = "Статус: Не активно"
+    StatusLabel.TextColor3 = Color3.new(1, 0.5, 0.5)
+    StatusLabel.TextSize = 14
+    StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    StatusLabel.Font = Enum.Font.Gotham
+    StatusLabel.Name = "StatusLabel"
+
+    -- Линия разделитель
+    local Divider = Instance.new("Frame")
+    Divider.Parent = MainFrame
+    Divider.Size = UDim2.new(1, -20, 0, 1)
+    Divider.Position = UDim2.new(0, 10, 0, 140)
+    Divider.BackgroundColor3 = Color3.new(1, 1, 1)
+    Divider.BackgroundTransparency = 0.7
+    Divider.BorderSizePixel = 0
+
+    -- Контейнер для статистики
+    local StatsContainer = Instance.new("Frame")
+    StatsContainer.Parent = MainFrame
+    StatsContainer.Size = UDim2.new(1, -20, 0, 280)
+    StatsContainer.Position = UDim2.new(0, 10, 0, 150)
+    StatsContainer.BackgroundTransparency = 1
+    StatsContainer.BorderSizePixel = 0
+
+    -- Функция создания строки статистики с прогрессом
+    local function createStatRow(parent, statName, startValue, endValue, position)
+        local rowFrame = Instance.new("Frame")
+        rowFrame.Parent = parent
+        rowFrame.Size = UDim2.new(1, 0, 0, 50)
+        rowFrame.Position = position
+        rowFrame.BackgroundTransparency = 1
+        rowFrame.BorderSizePixel = 0
+
+        -- Название статистики
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Parent = rowFrame
+        nameLabel.Size = UDim2.new(1, 0, 0, 20)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = statName
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.TextSize = 16
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Font = Enum.Font.GothamBold
+
+        -- Начальное значение
+        local startLabel = Instance.new("TextLabel")
+        startLabel.Parent = rowFrame
+        startLabel.Size = UDim2.new(0.45, 0, 0, 15)
+        startLabel.Position = UDim2.new(0, 0, 0, 25)
+        startLabel.BackgroundTransparency = 1
+        startLabel.Text = "Начало: " .. (startValue or "N/A")
+        startLabel.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+        startLabel.TextSize = 12
+        startLabel.TextXAlignment = Enum.TextXAlignment.Left
+        startLabel.Font = Enum.Font.Gotham
+        startLabel.Name = "StartValue"
+
+        -- Конечное значение
+        local endLabel = Instance.new("TextLabel")
+        endLabel.Parent = rowFrame
+        endLabel.Size = UDim2.new(0.45, 0, 0, 15)
+        endLabel.Position = UDim2.new(0.55, 0, 0, 25)
+        endLabel.BackgroundTransparency = 1
+        endLabel.Text = "Конец: " .. (endValue or "N/A")
+        endLabel.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+        endLabel.TextSize = 12
+        endLabel.TextXAlignment = Enum.TextXAlignment.Left
+        endLabel.Font = Enum.Font.Gotham
+        endLabel.Name = "EndValue"
+
+        -- Разница
+        local diffLabel = Instance.new("TextLabel")
+        diffLabel.Parent = rowFrame
+        diffLabel.Size = UDim2.new(1, 0, 0, 15)
+        diffLabel.Position = UDim2.new(0, 0, 0, 40)
+        diffLabel.BackgroundTransparency = 1
+        diffLabel.Text = "Разница: -"
+        diffLabel.TextColor3 = Color3.new(1, 1, 1)
+        diffLabel.TextSize = 13
+        diffLabel.TextXAlignment = Enum.TextXAlignment.Left
+        diffLabel.Font = Enum.Font.GothamBold
+        diffLabel.Name = "DiffValue"
+
+        return {
+            startLabel = startLabel, 
+            endLabel = endLabel, 
+            diffLabel = diffLabel
+        }
+    end
+
+    -- Создаем строки статистики
+    local statRows = {
+        fs = createStatRow(StatsContainer, "Fist Strength", nil, nil, UDim2.new(0, 0, 0, 0)),
+        pp = createStatRow(StatsContainer, "Psychic Power", nil, nil, UDim2.new(0, 0, 0, 55)),
+        jf = createStatRow(StatsContainer, "Jump Force", nil, nil, UDim2.new(0, 0, 0, 110)),
+        ms = createStatRow(StatsContainer, "Movement Speed", nil, nil, UDim2.new(0, 0, 0, 165)),
+        bt = createStatRow(StatsContainer, "Body Toughness", nil, nil, UDim2.new(0, 0, 0, 220))
+    }
+
+    -- Кнопки управления
+    local buttonFrame = Instance.new("Frame")
+    buttonFrame.Parent = MainFrame
+    buttonFrame.Size = UDim2.new(1, -20, 0, 40)
+    buttonFrame.Position = UDim2.new(0, 10, 1, -50)
+    buttonFrame.BackgroundTransparency = 1
+    buttonFrame.BorderSizePixel = 0
+
+    -- Кнопка закрытия
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Parent = MainFrame
+    CloseButton.Size = UDim2.new(1, -20, 0, 35)
+    CloseButton.Position = UDim2.new(0, 10, 1, -50)
+    CloseButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.8)
+    CloseButton.BackgroundTransparency = 0.2
+    CloseButton.Text = "ЗАКРЫТЬ"
+    CloseButton.TextColor3 = Color3.new(1, 1, 1)
+    CloseButton.TextSize = 14
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.BorderSizePixel = 0
+
+    -- Закругление кнопок
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.Parent = StartButton
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    
+    local buttonCorner2 = Instance.new("UICorner")
+    buttonCorner2.Parent = StopButton
+    buttonCorner2.CornerRadius = UDim.new(0, 8)
+    
+    local buttonCorner3 = Instance.new("UICorner")
+    buttonCorner3.Parent = CloseButton
+    buttonCorner3.CornerRadius = UDim.new(0, 8)
+
+    -- Обводка кнопок
+    local buttonStroke = Instance.new("UIStroke")
+    buttonStroke.Parent = StartButton
+    buttonStroke.Color = Color3.new(1, 1, 1)
+    buttonStroke.Thickness = 1.5
+    buttonStroke.Transparency = 0.5
+    
+    local buttonStroke2 = Instance.new("UIStroke")
+    buttonStroke2.Parent = StopButton
+    buttonStroke2.Color = Color3.new(1, 1, 1)
+    buttonStroke2.Thickness = 1.5
+    buttonStroke2.Transparency = 0.5
+    
+    local buttonStroke3 = Instance.new("UIStroke")
+    buttonStroke3.Parent = CloseButton
+    buttonStroke3.Color = Color3.new(1, 1, 1)
+    buttonStroke3.Thickness = 1.5
+    buttonStroke3.Transparency = 0.5
+
+    -- Переменные для отслеживания времени
+    local startTime = 0
+    local elapsedTime = 0
+    local timeConnection = nil
+
+    -- Функция обновления времени
+    local function updateTime()
+        if trackingActive then
+            elapsedTime = os.time() - startTime
+            TimeInfo.Text = "Время: " .. formatTime(elapsedTime)
+        end
+    end
+
+    -- Функция старта отслеживания
+    local function startTracking()
+        startStats = getAllStats()
+        startTime = os.time()
+        trackingActive = true
+        elapsedTime = 0
+        
+        -- Обновляем GUI
+        StatusLabel.Text = "Статус: Активно"
+        StatusLabel.TextColor3 = Color3.new(0.5, 1, 0.5)
+        TimeInfo.Text = "Время: 00:00"
+        
+        -- Обновляем начальные значения
+        statRows.fs.startLabel.Text = "Начало: " .. startStats.FistStrength
+        statRows.pp.startLabel.Text = "Начало: " .. startStats.PsychicPower
+        statRows.jf.startLabel.Text = "Начало: " .. startStats.JumpForce
+        statRows.ms.startLabel.Text = "Начало: " .. startStats.MovementSpeed
+        statRows.bt.startLabel.Text = "Начало: " .. startStats.BodyToughness
+        
+        -- Сбрасываем конечные значения и разницу
+        for _, row in pairs(statRows) do
+            row.endLabel.Text = "Конец: N/A"
+            row.diffLabel.Text = "Разница: -"
+            row.diffLabel.TextColor3 = Color3.new(1, 1, 1)
+        end
+        
+        -- Запускаем обновление времени
+        if timeConnection then
+            timeConnection:Disconnect()
+        end
+        timeConnection = game:GetService("RunService").Heartbeat:Connect(updateTime)
+        
+        print("📊 Отслеживание прогресса начато!")
+    end
+
+    -- Функция остановки отслеживания
+    local function stopTracking()
+        if not trackingActive then return end
+        
+        endStats = getAllStats()
+        trackingActive = false
+        
+        -- Обновляем GUI
+        StatusLabel.Text = "Статус: Завершено"
+        StatusLabel.TextColor3 = Color3.new(1, 1, 0.5)
+        
+        -- Обновляем конечные значения
+        statRows.fs.endLabel.Text = "Конец: " .. endStats.FistStrength
+        statRows.pp.endLabel.Text = "Конец: " .. endStats.PsychicPower
+        statRows.jf.endLabel.Text = "Конец: " .. endStats.JumpForce
+        statRows.ms.endLabel.Text = "Конец: " .. endStats.MovementSpeed
+        statRows.bt.endLabel.Text = "Конец: " .. endStats.BodyToughness
+                
+        -- Обновляем разницу с цветами
+        local fsDiff, fsColor = formatDifference(startStats.FistStrength, endStats.FistStrength)
+        local ppDiff, ppColor = formatDifference(startStats.PsychicPower, endStats.PsychicPower)
+        local jfDiff, jfColor = formatDifference(startStats.JumpForce, endStats.JumpForce)
+        local msDiff, msColor = formatDifference(startStats.MovementSpeed, endStats.MovementSpeed)
+        local btDiff, btColor = formatDifference(startStats.BodyToughness, endStats.BodyToughness)
+        
+        statRows.fs.diffLabel.Text = "Разница: " .. fsDiff
+        statRows.fs.diffLabel.TextColor3 = fsColor
+
+        statRows.pp.diffLabel.Text = "Разница: " .. ppDiff
+        statRows.pp.diffLabel.TextColor3 = ppColor
+
+        statRows.jf.diffLabel.Text = "Разница: " .. jfDiff
+        statRows.jf.diffLabel.TextColor3 = jfColor
+
+        statRows.ms.diffLabel.Text = "Разница: " .. msDiff
+        statRows.ms.diffLabel.TextColor3 = msColor
+
+        statRows.bt.diffLabel.Text = "Разница: " .. btDiff
+        statRows.bt.diffLabel.TextColor3 = btColor
+        
+        -- Останавливаем обновление времени
+        if timeConnection then
+            timeConnection:Disconnect()
+            timeConnection = nil
+        end
+        
+        print("📊 Отслеживание прогресса завершено!")
+        print("⏱ Общее время: " .. formatTime(elapsedTime))
+    end
+
+    -- Функция показа/скрытия панели
+    local function toggleProgressPanel()
+        if MainFrame.Visible then
+            -- Анимация скрытия
+            local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.new(0.5, -200, 0.5, -250),
+                Size = UDim2.new(0, 0, 0, 0)
+            })
+            tween:Play()
+            tween.Completed:Wait()
+            MainFrame.Visible = false
+        else
+            -- Анимация показа
+            MainFrame.Visible = true
+            MainFrame.Size = UDim2.new(0, 0, 0, 0)
+            local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 400, 0, 500),
+                Position = UDim2.new(0.5, -200, 0.5, -250)
+            })
+            tween:Play()
+        end
+    end
+
+    CloseButton.MouseButton1Click:Connect(toggleProgressPanel)
+
+    -- Обработчик клика вне фрейма для закрытия
+    local function setupClickOutside()
+        local background = Instance.new("TextButton")
+        background.Parent = ProgressGUI
+        background.Size = UDim2.new(1, 0, 1, 0)
+        background.Position = UDim2.new(0, 0, 0, 0)
+        background.BackgroundTransparency = 1
+        background.Text = ""
+        background.Visible = false
+        
+        background.MouseButton1Click:Connect(function()
+            if MainFrame.Visible then
+                toggleProgressPanel()
+            end
+        end)
+        
+        MainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            background.Visible = MainFrame.Visible
+        end)
+    end
+
+    setupClickOutside()
+
+    return {
+        toggle = toggleProgressPanel,
+        startTracking = startTracking,
+        stopTracking = stopTracking,
+        isTracking = function() return trackingActive end,
+        gui = ProgressGUI
+    }
+end
+
+-- Создаем панель прогресса
+local progressPanel = createProgressGUI()
+
 -- Анти-афк
 local VirtualUser = game:service'VirtualUser'
 game:service'Players'.LocalPlayer.Idled:connect(function()
@@ -563,6 +1099,78 @@ local function findTool()
     return nil
 end
 
+-- Функция для создания уведомлений
+local function createNotification(message, color)
+    color = color or Color3.new(1, 1, 1) -- Белый по умолчанию
+    
+    -- Удаляем старое уведомление если существует
+    if plr.PlayerGui:FindFirstChild("NotificationGUI") then
+        plr.PlayerGui.NotificationGUI:Destroy()
+    end
+
+    -- Создаем GUI для уведомления
+    local NotificationGUI = Instance.new("ScreenGui")
+    NotificationGUI.Parent = plr.PlayerGui
+    NotificationGUI.Name = "NotificationGUI"
+    NotificationGUI.ResetOnSpawn = false
+
+    -- Основной фрейм уведомления
+    local NotificationFrame = Instance.new("Frame")
+    NotificationFrame.Parent = NotificationGUI
+    NotificationFrame.Size = UDim2.new(0, 0, 0, 0)
+    NotificationFrame.Position = UDim2.new(0.5, 0, 0.1, 0)
+    NotificationFrame.AnchorPoint = Vector2.new(0.5, 0)
+    NotificationFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+    NotificationFrame.BackgroundTransparency = 0.15
+    NotificationFrame.BorderSizePixel = 0
+
+    -- Закругление
+    local UICorner = Instance.new("UICorner")
+    UICorner.Parent = NotificationFrame
+    UICorner.CornerRadius = UDim.new(0, 12)
+
+    -- Обводка
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Parent = NotificationFrame
+    UIStroke.Color = color
+    UIStroke.Thickness = 2
+    UIStroke.Transparency = 0.3
+
+    -- Текст уведомления
+    local NotificationText = Instance.new("TextLabel")
+    NotificationText.Parent = NotificationFrame
+    NotificationText.Size = UDim2.new(1, -20, 1, -20)
+    NotificationText.Position = UDim2.new(0, 10, 0, 10)
+    NotificationText.BackgroundTransparency = 1
+    NotificationText.Text = message
+    NotificationText.TextColor3 = color
+    NotificationText.TextSize = 18
+    NotificationText.TextScaled = false
+    NotificationText.Font = Enum.Font.GothamBold
+    NotificationText.TextWrapped = true
+
+    -- Анимация появления
+    local appearTween = TweenService:Create(NotificationFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 300, 0, 60)
+    })
+    appearTween:Play()
+
+    -- Автоматическое скрытие через 3 секунды
+    spawn(function()
+        wait(3)
+        
+        -- Анимация исчезновения
+        local disappearTween = TweenService:Create(NotificationFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        })
+        disappearTween:Play()
+        
+        disappearTween.Completed:Wait()
+        NotificationGUI:Destroy()
+    end)
+end
+
 -- Функция для создания GUI
 local function createGUI()
     -- Удаляем старый GUI если существует
@@ -634,6 +1242,8 @@ local function createGUI()
     -- Переменная для отслеживания состояния GUI
     local isExpanded = false
 
+
+
     -- Функция для анимации выдвижения/задвижения
     local function toggleInterface()
         if isExpanded then
@@ -679,59 +1289,85 @@ local function createGUI()
         local command = string.lower(message)
         
         if command == "print" then
+            createNotification("👤 Ник игрока: " .. plr.Name, Color3.new(0.2, 0.6, 1))
             print("Ник игрока: " .. plr.Name)
         elseif command == "deathreturn" or command == "dr" then
             deathreturnactive = not deathreturnactive
             local status = deathreturnactive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            local color = deathreturnactive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+            createNotification("💀 Возврат после смерти: " .. status, color)
             print("Система возврата после смерти: " .. status)
         elseif command == "stats" or command == "stat" or command == "статы" then
+            createNotification("📊 Открытие статистики", Color3.new(0.8, 0.8, 0.2))
             statsPanel.toggle()
         elseif command == "dex" then
+            createNotification("🛠 Загрузка Dex Explorer...", Color3.new(1, 0.5, 0))
             loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()
         elseif command == "fs" then
             farmfistactive = not farmfistactive
-            local status = farmfistactive and "ЗАПУЩЕН" or "ОСТАНОВЛЕН"
-            print("Фарм FS: " .. status)
+            local farmStatus = farmfistactive and "ЗАПУЩЕН" or "ОСТАНОВЛЕН"
+            local farmColor = farmfistactive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+            
             autoTeleportActive = not autoTeleportActive
-            local status = autoTeleportActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
-            print("Авто-телепортация по FS: " .. status)
+            local tpStatus = autoTeleportActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            local tpColor = autoTeleportActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+            
+            createNotification("👊 Фарм FS: " .. farmStatus .. "\n🎯 Авто-TP: " .. tpStatus, farmfistactive and Color3.new(0, 1, 0) or Color3.new(1, 0.5, 0))
+            
+            print("Фарм FS: " .. farmStatus)
+            print("Авто-телепортация по FS: " .. tpStatus)
             if autoTeleportActive then
                 autoTeleportByFS()
             end
         elseif command == "autotp" then
             autoTeleportActive = not autoTeleportActive
             local status = autoTeleportActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            local color = autoTeleportActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+            createNotification("🎯 Авто-телепортация FS: " .. status, color)
             print("Авто-телепортация по FS: " .. status)
             if autoTeleportActive then
                 autoTeleportByFS()
             end
-        elseif command == "stats" or command == "stat" or command == "статы" then
-            statsPanel.toggle()
         elseif command == "bt" then
             autoTeleportBTActive = not autoTeleportBTActive
             local status = autoTeleportBTActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            local color = autoTeleportBTActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+            createNotification("🛡 Авто-телепортация BT: " .. status, color)
             print("Авто-телепортация по Body Toughness: " .. status)
             if autoTeleportBTActive then
                 autoTeleportByBT()
             end
-        
-        -- КОМАНДЫ ПЕРЕЗАХОДА
         elseif command == "re" or command == "rejoin" or command == "rj" then
+            createNotification("🔄 Быстрый перезаход через 2 сек...", Color3.new(1, 0.8, 0))
             print("🔄 Быстрый перезаход...")
-            delayedRejoin(2)  -- Короткая задержка 2 секунды
+            delayedRejoin(2)
         elseif command == "instant rejoin" or command == "irj" then
+            createNotification("⚡ Мгновенный перезаход...", Color3.new(1, 0.5, 0))
             print("⚡ Мгновенный перезаход...")
             rejoinGame()
         elseif command == "autorejoin" or command == "arj" then
             autoRejoinActive = not autoRejoinActive
             local status = autoRejoinActive and "ВКЛЮЧЕН" or "ВЫКЛЮЧЕН"
+            local color = autoRejoinActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+            createNotification("🔄 Авто-перезаход: " .. status, color)
             print("Авто-перезаход: " .. status)
         elseif command == "serverinfo" or command == "si" then
+            createNotification("📊 Информация о сервере", Color3.new(0.3, 0.7, 1))
             print("=== ИНФОРМАЦИЯ О СЕРВЕРЕ ===")
             print("ID игры: " .. GAME_ID)
             print("Попытки перезахода: " .. rejoinAttempts)
             print("Авто-перезаход: " .. (autoRejoinActive and "ВКЛ" or "ВЫКЛ"))
+        elseif command == "ts" then
+            createNotification("📈 Начало отслеживания прогресса", Color3.new(0, 1, 0))
+            progressPanel.startTracking()
+        elseif command == "tss" then
+            createNotification("📉 Остановка отслеживания", Color3.new(1, 0.5, 0))
+            progressPanel.stopTracking()
+        elseif command == "tsg" then
+            createNotification("📊 Открытие панели прогресса", Color3.new(0.8, 0.8, 0.2))
+            progressPanel.toggle()
         elseif command == "help" then
+            createNotification("❓ Список команд открыт в консоли", Color3.new(0.5, 0.5, 1))
             print("Доступные команды:")
             print("print - показать ваш ник")
             print("dr - вкл/выкл возврат после смерти")
@@ -743,8 +1379,12 @@ local function createGUI()
             print("instant rejoin - мгновенный перезаход")
             print("autorejoin - вкл/выкл авто-перезаход при ошибках")
             print("serverinfo - информация о сервере")
+            print("trackstart - начать отслеживание статистики")
+            print("trackstop - остановить отслеживание и показать результаты")
+            print("trackstatus - статус отслеживания")
             print("help - показать этот список")
         else
+            createNotification("❌ Неизвестная команда", Color3.new(1, 0, 0))
             print("Неизвестная команда. Введите 'help' для списка команд.")
         end
     end
@@ -943,7 +1583,3 @@ _G.AutoFarm = {
 
 -- Создаем GUI при запуске
 createGUI()
-
-print("=== Auto-teleport and FS Farm system loaded! ===")
-print("Команды GUI: fs, autotp, bt, dr, help")
-print("Команды консоли: AutoFarm.startFarm(), AutoFarm.startAutoTeleportBT() и т.д.")
