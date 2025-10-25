@@ -1,0 +1,949 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
+local plr = Players.LocalPlayer
+
+-- Конфигурация серверов
+local GAME_ID = 2202352383
+local SERVER_CONFIG = {
+    AUTO_REJOIN = false,
+    REJOIN_DELAY = 5,
+    PREFER_PRIVATE = true
+}
+
+-- Переменные для управления перезаходом
+local autoRejoinActive = false
+local rejoinAttempts = 0
+local MAX_REJOIN_ATTEMPTS = 3
+
+-- Система телепортации и фарма
+local LOCATIONS = {
+    {name = "Rock", coords = Vector3.new(409, 271, 978), threshold = 0},
+    {name = "Crystal", coords = Vector3.new(-2279, 1944, 1053), threshold = 10000000},        -- 10M
+    {name = "Blue God Star", coords = Vector3.new(1176, 4789, -2293), threshold = 1000000000}, -- 1B
+    {name = "Green God Star", coords = Vector3.new(1381, 9274, 1647), threshold = 100000000000}, -- 100B
+    {name = "Red God Star", coords = Vector3.new(-369, 15735, -9), threshold = 10000000000000} -- 10T
+}
+
+-- Координаты для телепортации на основе Body Toughness (минимальные значения)
+local BODY_TOUGHNESS_LOCATIONS = {
+    {threshold = 5, coords = Vector3.new(365, 249, -445)},      -- Ice Bath
+    {threshold = 500, coords = Vector3.new(349, 263, -490)},    -- Fire Bath
+    {threshold = 5000, coords = Vector3.new(1640, 258, 2244)},  -- Iceberg
+    {threshold = 50000, coords = Vector3.new(-2307, 976, 1068)}, -- Tornado
+    {threshold = 500000, coords = Vector3.new(-2024, 714, -1860)}, -- Volcano
+    {threshold = 50000000, coords = Vector3.new(-254, 286, 980)}, -- Hell Fire Pit
+    {threshold = 5000000000, coords = Vector3.new(-271, 279, 991)}, -- Green Acid Pool
+    {threshold = 500000000000, coords = Vector3.new(-279, 279, 1007)} -- Red Acid Pool
+}
+
+-- Переменные для управления
+local farmfistactive = false
+local autoTeleportActive = false
+local autoTeleportBTActive = false
+local deathreturnactive = true
+local playerdied = false
+local lastValidTool = nil
+local lastlocationx, lastlocationy, lastlocationz
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local plr = Players.LocalPlayer
+
+-- Функция для получения только значения (третья часть строки)
+local function getValueFromText(textObject)
+    local success, result = pcall(function()
+        local text = textObject.Text -- "Psychic Power : 1.21K"
+        -- Разделяем строку по двоеточию и пробелам, берем третью часть
+        local parts = {}
+        for part in string.gmatch(text, "[^:]+") do
+            table.insert(parts, part:match("^%s*(.-)%s*$"))
+        end
+        
+        if #parts >= 2 then
+            return parts[2] -- Возвращаем "1.21K"
+        else
+            return text -- Если не удалось разделить, возвращаем исходный текст
+        end
+    end)
+    
+    if success and result then
+        return result
+    else
+        return "N/A"
+    end
+end
+
+-- Функции для каждой статистики
+local function getFistStrength()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.FSTxt)
+end
+
+local function getPsychicPower()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.PPTxt)
+end
+
+local function getJumpForce()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.JFTxt)
+end
+
+local function getMovementSpeed()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.MSTxt)
+end
+
+local function getBodyToughness()
+    return getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.BTTxt)
+end
+
+-- Создание GUI для статистики
+local function createStatsGUI()
+    -- Удаляем старую панель статистики если существует
+    if plr.PlayerGui:FindFirstChild("StatsGUI") then
+        plr.PlayerGui.StatsGUI:Destroy()
+    end
+
+    -- Создаем основной GUI
+    local StatsGUI = Instance.new("ScreenGui")
+    StatsGUI.Parent = plr.PlayerGui
+    StatsGUI.Name = "StatsGUI"
+    StatsGUI.ResetOnSpawn = false
+
+    -- Основной фрейм
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Parent = StatsGUI
+    MainFrame.Size = UDim2.new(0, 300, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+    MainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+    MainFrame.BackgroundTransparency = 0.15
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Visible = false -- Изначально скрыт
+
+    -- Закругление основного фрейма
+    local UICorner = Instance.new("UICorner")
+    UICorner.Parent = MainFrame
+    UICorner.CornerRadius = UDim.new(0, 12)
+
+    -- Тень/обводка
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Parent = MainFrame
+    UIStroke.Color = Color3.new(1, 1, 1)
+    UIStroke.Thickness = 2
+    UIStroke.Transparency = 0.7
+
+    -- Заголовок
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = MainFrame
+    TitleLabel.Size = UDim2.new(1, 0, 0, 50)
+    TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+    TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+    TitleLabel.BackgroundTransparency = 0.3
+    TitleLabel.Text = "СТАТИСТИКА ИГРОКА"
+    TitleLabel.TextColor3 = Color3.new(1, 1, 1)
+    TitleLabel.TextSize = 18
+    TitleLabel.TextScaled = false
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.BorderSizePixel = 0
+
+    -- Закругление заголовка
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.Parent = TitleLabel
+    TitleCorner.CornerRadius = UDim.new(0, 12)
+
+    -- Имя игрока
+    local PlayerName = Instance.new("TextLabel")
+    PlayerName.Parent = MainFrame
+    PlayerName.Size = UDim2.new(1, -20, 0, 30)
+    PlayerName.Position = UDim2.new(0, 10, 0, 55)
+    PlayerName.BackgroundTransparency = 1
+    PlayerName.Text = "Игрок: " .. plr.Name
+    PlayerName.TextColor3 = Color3.new(1, 1, 1)
+    PlayerName.TextSize = 16
+    PlayerName.TextXAlignment = Enum.TextXAlignment.Left
+    PlayerName.Font = Enum.Font.Gotham
+
+    -- Линия разделитель
+    local Divider = Instance.new("Frame")
+    Divider.Parent = MainFrame
+    Divider.Size = UDim2.new(1, -20, 0, 1)
+    Divider.Position = UDim2.new(0, 10, 0, 90)
+    Divider.BackgroundColor3 = Color3.new(1, 1, 1)
+    Divider.BackgroundTransparency = 0.7
+    Divider.BorderSizePixel = 0
+
+    -- Контейнер для статистики
+    local StatsContainer = Instance.new("Frame")
+    StatsContainer.Parent = MainFrame
+    StatsContainer.Size = UDim2.new(1, -20, 0, 200)
+    StatsContainer.Position = UDim2.new(0, 10, 0, 100)
+    StatsContainer.BackgroundTransparency = 1
+    StatsContainer.BorderSizePixel = 0
+
+    -- Функция создания строки статистики
+    local function createStatRow(parent, statName, statValue, position)
+        local rowFrame = Instance.new("Frame")
+        rowFrame.Parent = parent
+        rowFrame.Size = UDim2.new(1, 0, 0, 30)
+        rowFrame.Position = position
+        rowFrame.BackgroundTransparency = 1
+        rowFrame.BorderSizePixel = 0
+
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Parent = rowFrame
+        nameLabel.Size = UDim2.new(0.6, 0, 1, 0)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = statName
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.TextSize = 14
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Font = Enum.Font.Gotham
+
+        local valueLabel = Instance.new("TextLabel")
+        valueLabel.Parent = rowFrame
+        valueLabel.Size = UDim2.new(0.4, 0, 1, 0)
+        valueLabel.Position = UDim2.new(0.6, 0, 0, 0)
+        valueLabel.BackgroundTransparency = 1
+        valueLabel.Text = statValue
+        valueLabel.TextColor3 = Color3.new(1, 1, 1)
+        valueLabel.TextSize = 14
+        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valueLabel.Font = Enum.Font.GothamBold
+        valueLabel.Name = statName .. "Value"
+
+        return valueLabel
+    end
+
+    -- Создаем строки статистики
+    local fsValue = createStatRow(StatsContainer, "Fist Strength", getFistStrength(), UDim2.new(0, 0, 0, 0))
+    local ppValue = createStatRow(StatsContainer, "Psychic Power", getPsychicPower(), UDim2.new(0, 0, 0, 35))
+    local jfValue = createStatRow(StatsContainer, "Jump Force", getJumpForce(), UDim2.new(0, 0, 0, 70))
+    local msValue = createStatRow(StatsContainer, "Movement Speed", getMovementSpeed(), UDim2.new(0, 0, 0, 105))
+    local btValue = createStatRow(StatsContainer, "Body Toughness", getBodyToughness(), UDim2.new(0, 0, 0, 140))
+
+    -- Кнопка закрытия
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Parent = MainFrame
+    CloseButton.Size = UDim2.new(1, -20, 0, 40)
+    CloseButton.Position = UDim2.new(0, 10, 1, -50)
+    CloseButton.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
+    CloseButton.BackgroundTransparency = 0.2
+    CloseButton.Text = "ЗАКРЫТЬ"
+    CloseButton.TextColor3 = Color3.new(1, 1, 1)
+    CloseButton.TextSize = 16
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.BorderSizePixel = 0
+
+    -- Закругление кнопки
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.Parent = CloseButton
+    ButtonCorner.CornerRadius = UDim.new(0, 8)
+
+    -- Обводка кнопки
+    local ButtonStroke = Instance.new("UIStroke")
+    ButtonStroke.Parent = CloseButton
+    ButtonStroke.Color = Color3.new(1, 1, 1)
+    ButtonStroke.Thickness = 1.5
+    ButtonStroke.Transparency = 0.5
+
+    -- Функция обновления статистики
+    local function updateStats()
+        fsValue.Text = getFistStrength()
+        ppValue.Text = getPsychicPower()
+        jfValue.Text = getJumpForce()
+        msValue.Text = getMovementSpeed()
+        btValue.Text = getBodyToughness()
+    end
+
+    -- Функция показа/скрытия панели
+    local function toggleStatsPanel()
+        if MainFrame.Visible then
+            -- Анимация скрытия
+            local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.new(0.5, -150, 0.5, -175),
+                Size = UDim2.new(0, 0, 0, 0)
+            })
+            tween:Play()
+            tween.Completed:Wait()
+            MainFrame.Visible = false
+        else
+            -- Анимация показа
+            updateStats()
+            MainFrame.Visible = true
+            MainFrame.Size = UDim2.new(0, 0, 0, 0)
+            local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 300, 0, 350),
+                Position = UDim2.new(0.5, -150, 0.5, -175)
+            })
+            tween:Play()
+        end
+    end
+
+    -- Обработчик кнопки закрытия
+    CloseButton.MouseButton1Click:Connect(function()
+        toggleStatsPanel()
+    end)
+
+    -- Обработчик клика вне фрейма для закрытия
+     local function setupClickOutside()
+        local background = Instance.new("TextButton")
+        background.Parent = StatsGUI
+        background.Size = UDim2.new(1, 0, 1, 0)
+        background.Position = UDim2.new(0, 0, 0, 0)
+        background.BackgroundTransparency = 1
+        background.Text = ""
+        background.Visible = false
+        
+        background.MouseButton1Click:Connect(function()
+            if MainFrame.Visible then
+                toggleStatsPanel()
+            end
+        end)
+        
+        MainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            background.Visible = MainFrame.Visible
+        end)
+    end
+
+    setupClickOutside()
+
+    return {
+        toggle = toggleStatsPanel,
+        update = updateStats,
+        gui = StatsGUI
+    }
+end
+
+-- Создаем панель статистики
+local statsPanel = createStatsGUI()
+
+-- Автоматическое обновление статистики каждые 5 секунд когда панель открыта
+spawn(function()
+    while true do
+        wait(5)
+        if statsPanel and statsPanel.gui and statsPanel.gui:FindFirstChild("MainFrame") then
+            local mainFrame = statsPanel.gui.MainFrame
+            if mainFrame and mainFrame.Visible then
+                statsPanel.update()
+            end
+        end
+    end
+end)
+
+-- Анти-афк
+local VirtualUser = game:service'VirtualUser'
+game:service'Players'.LocalPlayer.Idled:connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+-- Функция для преобразования строковых значений в числа
+local function parseStatValue(valueStr)
+    if valueStr == "N/A" then return 0 end
+    
+    valueStr = string.gsub(valueStr:lower(), " ", "")
+    
+    local multipliers = {
+        k = 1000,
+        m = 1000000,
+        b = 1000000000,
+        t = 1000000000000
+    }
+    
+    local numberPart = tonumber(valueStr)
+    if numberPart then return numberPart end
+    
+    for suffix, multiplier in pairs(multipliers) do
+        local match = string.match(valueStr, "([%d%.]+)" .. suffix)
+        if match then
+            return tonumber(match) * multiplier
+        end
+    end
+    
+    return tonumber(valueStr) or 0
+end
+
+-- Функция для получения значения статистики
+local function getValueFromText(textObject)
+    local success, result = pcall(function()
+        local text = textObject.Text
+        local parts = {}
+        for part in string.gmatch(text, "[^:]+") do
+            table.insert(parts, part:match("^%s*(.-)%s*$"))
+        end
+        return #parts >= 2 and parts[2] or text
+    end)
+    return success and result or "N/A"
+end
+
+-- Функция для получения Fist Strength как числа
+local function getFistStrengthNumber()
+    local success, result = pcall(function()
+        local fsText = getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.FSTxt)
+        return parseStatValue(fsText)
+    end)
+    return success and result or 0
+end
+
+-- Функция для получения Body Toughness как числа
+local function getBodyToughnessNumber()
+    local success, result = pcall(function()
+        local btText = getValueFromText(plr.PlayerGui.ScreenGui.MenuFrame.InfoFrame.BTTxt)
+        return parseStatValue(btText)
+    end)
+    return success and result or 0
+end
+
+-- Функция для безопасной телепортации
+local function teleportToLocation(coords)
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        local humanoid = plr.Character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            plr.Character.HumanoidRootPart.CFrame = CFrame.new(coords)
+            print("Телепортирован на: " .. coords)
+            return true
+        end
+    end
+    return false
+end
+
+-- Функция для автоматической телепортации на основе FS
+local function autoTeleportByFS()
+    if not autoTeleportActive then 
+        print("Авто-телепортация по FS выключена")
+        return 
+    end
+    
+    local fsValue = getFistStrengthNumber()
+    print("Текущий FS: " .. fsValue)
+    
+    -- Находим самую подходящую локацию
+    local targetLocation = nil
+    for i = #LOCATIONS, 1, -1 do
+        local location = LOCATIONS[i]
+        if fsValue >= location.threshold then
+            targetLocation = location
+            break
+        end
+    end
+    
+    if targetLocation then
+        print("Телепортация на: " .. targetLocation.name .. " (требуется FS: " .. targetLocation.threshold .. ")")
+        teleportToLocation(targetLocation.coords)
+    else
+        print("Не найдена подходящая локация для FS: " .. fsValue)
+    end
+end
+
+-- Функция для автоматической телепортации на основе Body Toughness
+local function autoTeleportByBT()
+    if not autoTeleportBTActive then return end
+    
+    local btValue = getBodyToughnessNumber()
+    print("Текущий Body Toughness: " .. btValue)
+    
+    -- Находим подходящую локацию на основе Body Toughness
+    local targetLocation = nil
+    for i, location in ipairs(BODY_TOUGHNESS_LOCATIONS) do
+        if btValue >= location.threshold then
+            targetLocation = location
+        else
+            break
+        end
+    end
+    
+    if targetLocation then
+        teleportToLocation(targetLocation.coords)
+        print("Auto-teleported to BT location with threshold: " .. targetLocation.threshold)
+    end
+end
+
+-- Функция безопасного перезахода
+local function rejoinGame()
+    local success, errorMessage = pcall(function()
+        TeleportService:Teleport(GAME_ID)
+    end)
+    
+    if not success then
+        warn("Ошибка перезахода: " .. tostring(errorMessage))
+        return false
+    end
+    return true
+end
+
+-- Функция перезахода с задержкой
+local function delayedRejoin(delay)
+    delay = delay or SERVER_CONFIG.REJOIN_DELAY
+    print("Перезаход через " .. delay .. " секунд...")
+    
+    for i = delay, 1, -1 do
+        print(i .. "...")
+        wait(1)
+    end
+    
+    return rejoinGame()
+end
+
+-- Функция для поиска лучшего сервера
+local function findBestServer()
+    local success, serverList = pcall(function()
+        return TeleportService:GetGameInstancesAsync(GAME_ID)
+    end)
+    
+    if success and serverList then
+        for _, server in ipairs(serverList) do
+            if server.playing < server.maxPlayers then
+                return server.id
+            end
+        end
+    end
+    return nil
+end
+
+-- Умный перезаход
+local function smartRejoin()
+    if rejoinAttempts >= MAX_REJOIN_ATTEMPTS then
+        print("Достигнут лимит попыток перезахода")
+        return false
+    end
+    
+    rejoinAttempts += 1
+    print("Попытка перезахода #" .. rejoinAttempts)
+    
+    -- Пытаемся найти лучший сервер
+    local bestServer = findBestServer()
+    if bestServer then
+        local success = pcall(function()
+            TeleportService:TeleportToPlaceInstance(GAME_ID, bestServer)
+        end)
+        
+        if success then
+            print("Подключение к серверу: " .. bestServer)
+            return true
+        end
+    end
+    
+    -- Если не нашли сервер, используем обычный телепорт
+    return rejoinGame()
+end
+
+-- Автоматический перезаход при ошибках
+local function setupAutoRejoin()
+    plr.OnTeleport:Connect(function(state)
+        if state == Enum.TeleportState.Failed then
+            print("Телепортация не удалась")
+            if autoRejoinActive then
+                delayedRejoin(3)
+            end
+        elseif state == Enum.TeleportState.Started then
+            print("Начата телепортация...")
+        end
+    end)
+end
+
+-- Функция для поиска инструмента с обработкой смерти
+local function findTool()
+    -- Проверяем инвентарь
+    local backpack = plr:FindFirstChild("Backpack")
+    if not backpack then return nil end
+    
+    -- Ищем любой инструмент
+    local tool = backpack:FindFirstChildOfClass("Tool") or plr.Character:FindFirstChildOfClass("Tool")
+    
+    if tool then
+        lastValidTool = tool
+        return tool
+    elseif lastValidTool and lastValidTool.Parent then
+        return lastValidTool
+    end
+    
+    return nil
+end
+
+-- Функция для создания GUI
+local function createGUI()
+    -- Удаляем старый GUI если существует
+    if plr.PlayerGui:FindFirstChild("CommandGUI") then
+        plr.PlayerGui.CommandGUI:Destroy()
+    end
+
+    -- Создаем простой GUI для команд
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Parent = plr.PlayerGui
+    ScreenGui.Name = "CommandGUI"
+    ScreenGui.ResetOnSpawn = false
+
+    -- Создаем круглую кнопку
+    local RoundButton = Instance.new("TextButton")
+    RoundButton.Parent = ScreenGui
+    RoundButton.Size = UDim2.new(0, 43, 0, 43)
+    RoundButton.Position = UDim2.new(0, 173, 0, -45)
+    RoundButton.Text = "≡"
+    RoundButton.BackgroundColor3 = Color3.new(0, 0, 0)
+    RoundButton.BackgroundTransparency = 0.2
+    RoundButton.TextColor3 = Color3.new(1, 1, 1)
+    RoundButton.TextSize = 24
+    RoundButton.TextScaled = false
+
+    -- Закругление для круглой кнопки
+    local UICornerRound = Instance.new("UICorner")
+    UICornerRound.Parent = RoundButton
+    UICornerRound.CornerRadius = UDim.new(1, 0)
+
+    -- Создаем TextBox (изначально скрыт)
+    local TextBox = Instance.new("TextBox")
+    TextBox.Parent = ScreenGui
+    TextBox.Size = UDim2.new(0, 200, 0, 43)
+    TextBox.Position = UDim2.new(0, 240, 0, -45)
+    TextBox.PlaceholderText = "Введите команду..."
+    TextBox.BackgroundColor3 = Color3.new(0, 0, 0)
+    TextBox.BackgroundTransparency = 0.2
+    TextBox.TextColor3 = Color3.new(1, 1, 1)
+    TextBox.TextSize = 14
+    TextBox.TextXAlignment = Enum.TextXAlignment.Center
+    TextBox.TextYAlignment = Enum.TextYAlignment.Center
+    TextBox.Visible = false
+
+    -- Закругление для TextBox
+    local UICorner1 = Instance.new("UICorner")
+    UICorner1.Parent = TextBox
+    UICorner1.CornerRadius = UDim.new(0, 12)
+
+    -- Создаем TextButton (изначально скрыт)
+    local TextButton = Instance.new("TextButton")
+    TextButton.Parent = ScreenGui
+    TextButton.Size = UDim2.new(0, 80, 0, 43)
+    TextButton.Position = UDim2.new(0, 450, 0, -45)
+    TextButton.Text = "OK"
+    TextButton.BackgroundColor3 = Color3.new(0, 0, 0)
+    TextButton.BackgroundTransparency = 0.2
+    TextButton.TextColor3 = Color3.new(1, 1, 1)
+    TextButton.TextSize = 16
+    TextButton.TextXAlignment = Enum.TextXAlignment.Center
+    TextButton.TextYAlignment = Enum.TextYAlignment.Center
+    TextButton.Visible = false
+
+    -- Закругление для TextButton
+    local UICorner2 = Instance.new("UICorner")
+    UICorner2.Parent = TextButton
+    UICorner2.CornerRadius = UDim.new(0, 12)
+
+    -- Переменная для отслеживания состояния GUI
+    local isExpanded = false
+
+    -- Функция для анимации выдвижения/задвижения
+    local function toggleInterface()
+        if isExpanded then
+            -- Задвигаем интерфейс
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            local tween1 = TweenService:Create(TextBox, tweenInfo, {Position = UDim2.new(0, 285, 0, -45)})
+            local tween2 = TweenService:Create(TextButton, tweenInfo, {Position = UDim2.new(0, 495, 0, -45)})
+            
+            tween1:Play()
+            tween2:Play()
+            
+            -- Скрываем элементы после анимации
+            tween1.Completed:Connect(function()
+                TextBox.Visible = false
+                TextButton.Visible = false
+            end)
+        else
+            -- Показываем элементы перед анимацией
+            TextBox.Visible = true
+            TextButton.Visible = true
+            
+            -- Выдвигаем интерфейс
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            local tween1 = TweenService:Create(TextBox, tweenInfo, {Position = UDim2.new(0, 240, 0, 0)})
+            local tween2 = TweenService:Create(TextButton, tweenInfo, {Position = UDim2.new(0, 450, 0, 0)})
+            
+            tween1:Play()
+            tween2:Play()
+        end
+        
+        isExpanded = not isExpanded
+    end
+
+    -- Обработчик нажатия на круглую кнопку
+    RoundButton.MouseButton1Click:Connect(function()
+        toggleInterface()
+    end)
+
+    -- Функция обработки команд
+    local function handleCommand(message)
+        local command = string.lower(message)
+        
+        if command == "print" then
+            print("Ник игрока: " .. plr.Name)
+        elseif command == "deathreturn" or command == "dr" then
+            deathreturnactive = not deathreturnactive
+            local status = deathreturnactive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            print("Система возврата после смерти: " .. status)
+        elseif command == "stats" or command == "stat" or command == "статы" then
+            statsPanel.toggle()
+        elseif command == "dex" then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()
+        elseif command == "fs" then
+            farmfistactive = not farmfistactive
+            local status = farmfistactive and "ЗАПУЩЕН" or "ОСТАНОВЛЕН"
+            print("Фарм FS: " .. status)
+            autoTeleportActive = not autoTeleportActive
+            local status = autoTeleportActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            print("Авто-телепортация по FS: " .. status)
+            if autoTeleportActive then
+                autoTeleportByFS()
+            end
+        elseif command == "autotp" then
+            autoTeleportActive = not autoTeleportActive
+            local status = autoTeleportActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            print("Авто-телепортация по FS: " .. status)
+            if autoTeleportActive then
+                autoTeleportByFS()
+            end
+        elseif command == "stats" or command == "stat" or command == "статы" then
+            statsPanel.toggle()
+        elseif command == "bt" then
+            autoTeleportBTActive = not autoTeleportBTActive
+            local status = autoTeleportBTActive and "ВКЛЮЧЕНА" or "ВЫКЛЮЧЕНА"
+            print("Авто-телепортация по Body Toughness: " .. status)
+            if autoTeleportBTActive then
+                autoTeleportByBT()
+            end
+        
+        -- КОМАНДЫ ПЕРЕЗАХОДА
+        elseif command == "re" or command == "rejoin" or command == "rj" then
+            print("🔄 Быстрый перезаход...")
+            delayedRejoin(2)  -- Короткая задержка 2 секунды
+        elseif command == "instant rejoin" or command == "irj" then
+            print("⚡ Мгновенный перезаход...")
+            rejoinGame()
+        elseif command == "autorejoin" or command == "arj" then
+            autoRejoinActive = not autoRejoinActive
+            local status = autoRejoinActive and "ВКЛЮЧЕН" or "ВЫКЛЮЧЕН"
+            print("Авто-перезаход: " .. status)
+        elseif command == "serverinfo" or command == "si" then
+            print("=== ИНФОРМАЦИЯ О СЕРВЕРЕ ===")
+            print("ID игры: " .. GAME_ID)
+            print("Попытки перезахода: " .. rejoinAttempts)
+            print("Авто-перезаход: " .. (autoRejoinActive and "ВКЛ" or "ВЫКЛ"))
+        elseif command == "help" then
+            print("Доступные команды:")
+            print("print - показать ваш ник")
+            print("dr - вкл/выкл возврат после смерти")
+            print("fs - вкл/выкл фарм FS")
+            print("autotp - вкл/выкл авто-телепортацию по FS")
+            print("bt - вкл/выкл авто-телепортацию по Body Toughness")
+            print("re - быстрый перезаход (2 сек)")
+            print("rejoin - перезайти на сервер (с задержкой)")
+            print("instant rejoin - мгновенный перезаход")
+            print("autorejoin - вкл/выкл авто-перезаход при ошибках")
+            print("serverinfo - информация о сервере")
+            print("help - показать этот список")
+        else
+            print("Неизвестная команда. Введите 'help' для списка команд.")
+        end
+    end
+
+    -- Обработчик для кнопки "OK"
+    TextButton.MouseButton1Click:Connect(function()
+        local message = TextBox.Text
+        if message ~= "" then
+            handleCommand(message)
+        end
+        TextBox.Text = ""
+    end)
+
+    -- Обработчик для TextBox (при нажатии Enter)
+    TextBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local message = TextBox.Text
+            if message ~= "" then
+                handleCommand(message)
+            end
+            TextBox.Text = ""
+        end
+    end)
+
+    return ScreenGui
+end
+
+-- Основной цикл фарма FS
+spawn(function()
+    while true do
+        if farmfistactive and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local humanoid = plr.Character.Humanoid
+            
+            -- Ищем инструмент с обработкой смерти
+            local tool = findTool()
+            
+            if tool then
+                humanoid:EquipTool(tool)
+                
+                while farmfistactive and plr.Character and plr.Character:FindFirstChild("Humanoid") and humanoid.Health > 0 do
+                    local success, err = pcall(function()
+                        ReplicatedStorage.RemoteEvent:FireServer({[1] = "Click"})
+                        tool:Activate()
+                    end)
+                    
+                    if not success then
+                        warn("Ошибка фарма: " .. err)
+                        break
+                    end
+                    
+                    task.wait(0.1)
+                end
+            else
+                print("Инструмент не найден, ожидание...")
+                task.wait(2)
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Автоматическая проверка FS каждые 10 секунд
+spawn(function()
+    while true do
+        task.wait(10)
+        if autoTeleportActive then
+            autoTeleportByFS()
+        end
+    end
+end)
+
+-- Автоматическая проверка Body Toughness каждые 10 секунд
+spawn(function()
+    while true do
+        task.wait(10)
+        if autoTeleportBTActive then
+            autoTeleportByBT()
+        end
+    end
+end)
+
+-- Система возврата после смерти
+spawn(function()
+    while true do
+        if deathreturnactive then
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+                plr.Character.Humanoid.Died:connect(function()
+                    playerdied = true
+                end)
+            end
+        end
+        
+        if not playerdied and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            lastlocationx = plr.Character.HumanoidRootPart.Position.x
+            lastlocationy = plr.Character.HumanoidRootPart.Position.y
+            lastlocationz = plr.Character.HumanoidRootPart.Position.z
+            wait(0.5)
+        end
+        
+        if playerdied then
+            ReplicatedStorage.RemoteEvent:FireServer({[1] = "Respawn"})
+            wait(2.6)
+            
+            -- Ждем появления нового персонажа
+            repeat 
+                wait(0.4) 
+            until plr.Character and plr.Character:FindFirstChild("Humanoid")
+            
+            -- Пересоздаем GUI после respawn
+            createGUI()
+            
+            if deathreturnactive and plr.Character:FindFirstChild("HumanoidRootPart") then
+                plr.Character.HumanoidRootPart.CFrame = CFrame.new(lastlocationx, lastlocationy, lastlocationz)
+            end    
+            
+            -- Отключаем визуальные эффекты
+            Lighting.Blur.Enabled = false
+            if plr.PlayerGui:FindFirstChild("IntroGui") then
+                plr.PlayerGui.IntroGui.Enabled = false
+            end
+            
+            playerdied = false
+            lastValidTool = nil -- Сбрасываем инструмент при смерти
+        end
+        
+        wait(0.2)
+    end        
+end)
+
+-- Обработчик смерти персонажа для сброса инструмента
+plr.CharacterAdded:Connect(function(character)
+    character:WaitForChild("Humanoid").Died:Connect(function()
+        print("Персонаж умер, перезапуск фарма...")
+        lastValidTool = nil
+    end)
+end)
+
+-- Обработчик чата для команд
+plr.Chatted:Connect(function(message)
+    if message == "dr" then
+        deathreturnactive = not deathreturnactive
+        print("Death return: " .. (deathreturnactive and "ON" or "OFF"))
+    elseif message == "fs" then
+        farmfistactive = not farmfistactive
+        print("Farm: " .. (farmfistactive and "ON" or "OFF"))
+    elseif message == "autotp" then
+        autoTeleportActive = not autoTeleportActive
+        print("Auto TP FS: " .. (autoTeleportActive and "ON" or "OFF"))
+    elseif message == "bt" then
+        autoTeleportBTActive = not autoTeleportBTActive
+        print("Auto TP BT: " .. (autoTeleportBTActive and "ON" or "OFF"))
+    end
+end)
+
+-- Функции для управления (можно вызвать из консоли)
+_G.AutoFarm = {
+    startFarm = function()
+        farmfistactive = true
+        print("Фарм FS запущен")
+    end,
+    
+    stopFarm = function()
+        farmfistactive = false
+        print("Фарм FS остановлен")
+    end,
+    
+    startAutoTeleport = function()
+        autoTeleportActive = true
+        print("Авто-телепортация по FS включена")
+        autoTeleportByFS()
+    end,
+    
+    stopAutoTeleport = function()
+        autoTeleportActive = false
+        print("Авто-телепортация по FS выключена")
+    end,
+    
+    startAutoTeleportBT = function()
+        autoTeleportBTActive = true
+        print("Авто-телепортация по Body Toughness включена")
+        autoTeleportByBT()
+    end,
+    
+    stopAutoTeleportBT = function()
+        autoTeleportBTActive = false
+        print("Авто-телепортация по Body Toughness выключена")
+    end,
+    
+    teleportToLocation = teleportToLocation,
+    
+    toggleDeathReturn = function()
+        deathreturnactive = not deathreturnactive
+        print("Death Return: " .. (deathreturnactive and "ON" or "OFF"))
+    end
+}
+
+-- Создаем GUI при запуске
+createGUI()
+
+print("=== Auto-teleport and FS Farm system loaded! ===")
+print("Команды GUI: fs, autotp, bt, dr, help")
+print("Команды консоли: AutoFarm.startFarm(), AutoFarm.startAutoTeleportBT() и т.д.")
