@@ -124,7 +124,7 @@ local function formatDifference(startValStr, endValStr)
 end
 
 -- ==============================
--- === Stats GUI (ваш стиль) ===
+-- === Stats GUI ===
 -- ==============================
 local function createStatsGUI()
     if plr.PlayerGui:FindFirstChild("StatsGUI") then
@@ -145,49 +145,49 @@ local function createStatsGUI()
     MainFrame.Parent = StatsGUI
     MainFrame.Visible = false
 
-    -- Закругление основного фрейма
+    -- Main frame rounding
     local UICorner = Instance.new("UICorner")
     UICorner.Parent = MainFrame
     UICorner.CornerRadius = UDim.new(0, 12)
 
-    -- Тень/обводка
+    -- Shadow/border
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = MainFrame
     UIStroke.Color = Color3.new(1, 1, 1)
     UIStroke.Thickness = 2
     UIStroke.Transparency = 0.7
 
-    -- Заголовок
+    -- Title
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Size = UDim2.new(1, 0, 0, 50)
     TitleLabel.Position = UDim2.new(0, 0, 0, 0)
     TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0)
     TitleLabel.BackgroundTransparency = 0.3
-    TitleLabel.Text = "СТАТИСТИКА ИГРОКА"
+    TitleLabel.Text = "PLAYER STATISTICS"
     TitleLabel.TextColor3 = Color3.new(1, 1, 1)
     TitleLabel.TextSize = 18
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.BorderSizePixel = 0
     TitleLabel.Parent = MainFrame
 
-    -- Закругление заголовка
+    -- Title rounding
     local TitleCorner = Instance.new("UICorner")
     TitleCorner.Parent = TitleLabel
     TitleCorner.CornerRadius = UDim.new(0, 12)
 
-    -- Имя игрока
+    -- Player name
     local PlayerName = Instance.new("TextLabel")
     PlayerName.Size = UDim2.new(1, -20, 0, 30)
     PlayerName.Position = UDim2.new(0, 10, 0, 55)
     PlayerName.BackgroundTransparency = 1
-    PlayerName.Text = "Игрок: " .. (plr and plr.Name or "Player")
+    PlayerName.Text = "Player: " .. (plr and plr.Name or "Player")
     PlayerName.TextColor3 = Color3.new(1, 1, 1)
     PlayerName.TextSize = 16
     PlayerName.TextXAlignment = Enum.TextXAlignment.Left
     PlayerName.Font = Enum.Font.Gotham
     PlayerName.Parent = MainFrame
 
-    -- Линия разделитель
+    -- Divider line
     local Divider = Instance.new("Frame")
     Divider.Size = UDim2.new(1, -20, 0, 1)
     Divider.Position = UDim2.new(0, 10, 0, 90)
@@ -196,7 +196,7 @@ local function createStatsGUI()
     Divider.BorderSizePixel = 0
     Divider.Parent = MainFrame
 
-    -- Контейнер для статистики
+    -- Stats container
     local StatsContainer = Instance.new("Frame")
     StatsContainer.Size = UDim2.new(1, -20, 0, 200)
     StatsContainer.Position = UDim2.new(0, 10, 0, 100)
@@ -243,32 +243,32 @@ local function createStatsGUI()
     local msValue = createRow(105, "Movement Speed", getMovementSpeedText())
     local btValue = createRow(140, "Body Toughness", getBodyToughnessText())
 
-    -- Кнопка закрытия
+    -- Close button
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(1, -20, 0, 40)
     CloseButton.Position = UDim2.new(0, 10, 1, -50)
     CloseButton.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
     CloseButton.BackgroundTransparency = 0.2
-    CloseButton.Text = "ЗАКРЫТЬ"
+    CloseButton.Text = "CLOSE"
     CloseButton.TextColor3 = Color3.new(1, 1, 1)
     CloseButton.TextSize = 16
     CloseButton.Font = Enum.Font.GothamBold
     CloseButton.BorderSizePixel = 0
     CloseButton.Parent = MainFrame
 
-    -- Закругление кнопки
+    -- Button rounding
     local ButtonCorner = Instance.new("UICorner")
     ButtonCorner.Parent = CloseButton
     ButtonCorner.CornerRadius = UDim.new(0, 8)
 
-    -- Обводка кнопки
+    -- Button border
     local ButtonStroke = Instance.new("UIStroke")
     ButtonStroke.Parent = CloseButton
     ButtonStroke.Color = Color3.new(1, 1, 1)
     ButtonStroke.Thickness = 1.5
     ButtonStroke.Transparency = 0.5
 
-    -- Функция обновления статистики
+    -- Stats update function
     local function updateStats()
         fsValue.Text = getFistStrengthText()
         ppValue.Text = getPsychicPowerText()
@@ -277,7 +277,7 @@ local function createStatsGUI()
         btValue.Text = getBodyToughnessText()
     end
 
-    -- Функция показа/скрытия панели
+    -- Panel show/hide function
     local function toggleStatsPanel()
         if MainFrame.Visible then
             local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
@@ -301,7 +301,7 @@ local function createStatsGUI()
 
     CloseButton.MouseButton1Click:Connect(toggleStatsPanel)
 
-    -- Обработчик клика вне фрейма
+    -- Click outside handler
     local function setupClickOutside()
         local background = Instance.new("TextButton")
         background.Parent = StatsGUI
@@ -324,7 +324,7 @@ local function createStatsGUI()
 
     setupClickOutside()
 
-    -- Авто-обновление
+    -- Auto-update
     spawn(function()
         while true do
             wait(5)
@@ -342,7 +342,6 @@ local function createStatsGUI()
 end
 
 -- ==============================
--- ==============================
 -- === ESP System with Teleport ===
 -- ==============================
 local function createESPSystem(commandConsole)
@@ -351,28 +350,28 @@ local function createESPSystem(commandConsole)
     local TweenService = game:GetService("TweenService")
     local plr = Players.LocalPlayer
     
-    -- Локальная функция для вывода сообщений (безопасная)
+    -- Local function for output messages (safe)
     local function showOutput(text)
         if commandConsole and commandConsole.showOutput then
             commandConsole.showOutput(text)
         else
-            -- Резервный вывод в консоль
+            -- Fallback output to console
             print("[ESP]: " .. tostring(text))
         end
     end
     
-    -- Таблицы для хранения ESP элементов
+    -- Tables for storing ESP elements
     local espFolders = {}
     local espConnections = {}
     local espEnabled = false
     
-    -- Создаем GUI для ESP
+    -- Create GUI for ESP
     local ESPGui = Instance.new("ScreenGui")
     ESPGui.Name = "ESPGui"
     ESPGui.Parent = plr.PlayerGui
     ESPGui.ResetOnSpawn = false
     
-    -- Функция безопасной телепортации
+    -- Safe teleport function
     local function safeTeleportTo(cf)
         local char = plr.Character
         if not char then return false end
@@ -387,33 +386,33 @@ local function createESPSystem(commandConsole)
         return success
     end
     
-    -- Функция телепортации к игроку
+    -- Teleport to player function
     local function teleportToPlayer(targetPlayer)
         local targetChar = targetPlayer.Character
         if not targetChar then
-            showOutput("❌ Игрок " .. targetPlayer.Name .. " не имеет персонажа")
+            showOutput("❌ Player " .. targetPlayer.Name .. " has no character")
             return
         end
         
         local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
         if not targetHrp then
-            showOutput("❌ Не могу найти HumanoidRootPart у " .. targetPlayer.Name)
+            showOutput("❌ Cannot find HumanoidRootPart for " .. targetPlayer.Name)
             return
         end
         
-        -- Телепортируем на небольшом расстоянии от цели
+        -- Teleport to a small distance from target
         local targetCFrame = targetHrp.CFrame + targetHrp.CFrame.LookVector * -8 + Vector3.new(0, 3, 0)
         
         if safeTeleportTo(targetCFrame) then
-            showOutput("🎯 Телепортирован к игроку: " .. targetPlayer.Name)
+            showOutput("🎯 Teleported to player: " .. targetPlayer.Name)
         else
-            showOutput("❌ Ошибка телепортации к " .. targetPlayer.Name)
+            showOutput("❌ Teleport error to " .. targetPlayer.Name)
         end
     end
     
-    -- Функция создания ESP для игрока
+    -- Create ESP for player
     local function createESP(player)
-        if player == plr then return end -- Не показываем себя
+        if player == plr then return end -- Don't show ourselves
         
         local character = player.Character
         if not character then return end
@@ -422,13 +421,13 @@ local function createESPSystem(commandConsole)
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoidRootPart or not humanoid then return end
         
-        -- Создаем folder для хранения ESP элементов этого игрока
+        -- Create folder for ESP elements of this player
         local espFolder = Instance.new("Folder")
         espFolder.Name = player.Name
         espFolder.Parent = ESPGui
         espFolders[player] = espFolder
         
-        -- Создаем BillboardGui для отображения над головой
+        -- Create BillboardGui for display above head
         local billboard = Instance.new("BillboardGui")
         billboard.Name = "ESP"
         billboard.Size = UDim2.new(0, 100, 0, 25)
@@ -438,7 +437,7 @@ local function createESPSystem(commandConsole)
         billboard.Active = true 
         billboard.Parent = espFolder
         
-        -- Привязываем к голове игрока
+        -- Attach to player's head
         local head = character:FindFirstChild("Head")
         if head then
             billboard.Adornee = head
@@ -446,7 +445,7 @@ local function createESPSystem(commandConsole)
             billboard.Adornee = humanoidRootPart
         end
         
-        -- Фон для имени
+        -- Background for name
         local nameBackground = Instance.new("Frame")
         nameBackground.Name = "Background"
         nameBackground.Size = UDim2.new(1, 0, 0, 25)
@@ -456,19 +455,19 @@ local function createESPSystem(commandConsole)
         nameBackground.BorderSizePixel = 0
         nameBackground.Parent = billboard
         
-        -- Закругление фона
+        -- Background rounding
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = nameBackground
         
-        -- Обводка
+        -- Border
         local stroke = Instance.new("UIStroke")
         stroke.Color = Color3.new(1, 1, 1)
         stroke.Thickness = 1
         stroke.Transparency = 0.5
         stroke.Parent = nameBackground
         
-        -- Текст с именем игрока (КЛИКАБЕЛЬНЫЙ)
+        -- Player name text (CLICKABLE)
         local nameLabel = Instance.new("TextButton")
         nameLabel.Name = "NameLabel"
         nameLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -483,7 +482,7 @@ local function createESPSystem(commandConsole)
         nameLabel.Active = true 
         nameLabel.Parent = nameBackground
         
-        -- Дистанция под именем
+        -- Distance under name
         local distanceLabel = Instance.new("TextLabel")
         distanceLabel.Name = "DistanceLabel"
         distanceLabel.Size = UDim2.new(1, 0, 0, 15)
@@ -495,22 +494,22 @@ local function createESPSystem(commandConsole)
         distanceLabel.Font = Enum.Font.Gotham
         distanceLabel.Parent = billboard
         
-        -- ОБРАБОТЧИК КЛИКА ДЛЯ ТЕЛЕПОРТАЦИИ
+        -- CLICK HANDLER FOR TELEPORTATION
         nameLabel.MouseButton1Click:Connect(function()
-            showOutput("🔄 Телепортация к " .. player.Name .. "...")
+            showOutput("🔄 Teleporting to " .. player.Name .. "...")
             teleportToPlayer(player)
         end)
         
-        -- Анимация при наведении (визуальная обратная связь)
+        -- Hover animation (visual feedback)
         nameLabel.MouseEnter:Connect(function()
             local tween = TweenService:Create(nameBackground, TweenInfo.new(0.2), {
                 BackgroundTransparency = 0.1,
-                BackgroundColor3 = Color3.new(0.1, 0.3, 0.1) -- Зеленый при наведении
+                BackgroundColor3 = Color3.new(0.1, 0.3, 0.1) -- Green on hover
             })
             tween:Play()
             
             local textTween = TweenService:Create(nameLabel, TweenInfo.new(0.2), {
-                TextColor3 = Color3.new(0, 1, 0) -- Ярко-зеленый текст
+                TextColor3 = Color3.new(0, 1, 0) -- Bright green text
             })
             textTween:Play()
         end)
@@ -518,17 +517,17 @@ local function createESPSystem(commandConsole)
         nameLabel.MouseLeave:Connect(function()
             local tween = TweenService:Create(nameBackground, TweenInfo.new(0.2), {
                 BackgroundTransparency = 0.3,
-                BackgroundColor3 = Color3.new(0, 0, 0) -- Возвращаем черный
+                BackgroundColor3 = Color3.new(0, 0, 0) -- Return to black
             })
             tween:Play()
             
             local textTween = TweenService:Create(nameLabel, TweenInfo.new(0.2), {
-                TextColor3 = Color3.new(1, 1, 1) -- Белый текст
+                TextColor3 = Color3.new(1, 1, 1) -- White text
             })
             textTween:Play()
         end)
         
-        -- Функция обновления дистанции
+        -- Distance update function
         local function updateDistance()
             if not espEnabled then return end
             
@@ -540,20 +539,20 @@ local function createESPSystem(commandConsole)
                 local distance = (localHrp.Position - targetHrp.Position).Magnitude
                 distanceLabel.Text = string.format("%.0f studs", distance)
                 
-                -- Меняем цвет в зависимости от дистанции
+                -- Change color based on distance
                 if distance < 20 then
-                    nameLabel.TextColor3 = Color3.new(1, 0.2, 0.2) -- Красный (близко)
+                    nameLabel.TextColor3 = Color3.new(1, 0.2, 0.2) -- Red (close)
                 elseif distance < 50 then
-                    nameLabel.TextColor3 = Color3.new(1, 0.8, 0.2) -- Оранжевый
+                    nameLabel.TextColor3 = Color3.new(1, 0.8, 0.2) -- Orange
                 else
-                    nameLabel.TextColor3 = Color3.new(0.2, 1, 0.2) -- Зеленый (далеко)
+                    nameLabel.TextColor3 = Color3.new(0.2, 1, 0.2) -- Green (far)
                 end
             else
                 distanceLabel.Text = "N/A"
             end
         end
         
-        -- Запускаем обновление дистанции
+        -- Start distance update
         local distanceConnection = RunService.Heartbeat:Connect(updateDistance)
         table.insert(espConnections, distanceConnection)
 
@@ -561,7 +560,7 @@ local function createESPSystem(commandConsole)
         billboard.Size = UDim2.new(0, 200 * scale, 0, 50 * scale)
     end
     
-    -- Функция удаления ESP игрока
+    -- Remove player ESP function
     local function removeESP(player)
         if espFolders[player] then
             espFolders[player]:Destroy()
@@ -569,24 +568,24 @@ local function createESPSystem(commandConsole)
         end
     end
     
-    -- Функция включения ESP
+    -- Enable ESP function
     local function enableESP()
         if espEnabled then 
-            showOutput("👁️ ESP: уже включен")
+            showOutput("👁️ ESP: already enabled")
             return 
         end
         
         espEnabled = true
-        showOutput("👁️ ESP: включен - кликайте на имена игроков для телепортации!")
+        showOutput("👁️ ESP: enabled - click on player names to teleport!")
         
-        -- Создаем ESP для всех существующих игроков
+        -- Create ESP for all existing players
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= plr then
                 pcall(createESP, player)
             end
         end
         
-        -- Обработчик для новых игроков
+        -- Handler for new players
         local playerAddedConnection = Players.PlayerAdded:Connect(function(player)
             if espEnabled then
                 pcall(function() createESP(player) end)
@@ -594,15 +593,15 @@ local function createESPSystem(commandConsole)
         end)
         table.insert(espConnections, playerAddedConnection)
         
-        -- Обработчик для вышедших игроков
+        -- Handler for leaving players
         local playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
             pcall(function() removeESP(player) end)
         end)
         table.insert(espConnections, playerRemovingConnection)
         
-        -- Обработчик для респавна персонажей
+        -- Handler for character respawn
         local characterAddedConnection = plr.CharacterAdded:Connect(function()
-            -- Пересоздаем ESP при респавне
+            -- Recreate ESP on respawn
             if espEnabled then
                 for _, player in ipairs(Players:GetPlayers()) do
                     if player ~= plr then
@@ -615,17 +614,17 @@ local function createESPSystem(commandConsole)
         table.insert(espConnections, characterAddedConnection)
     end
     
-    -- Функция отключения ESP
+    -- Disable ESP function
     local function disableESP()
         if not espEnabled then 
-            showOutput("👁️ ESP: уже выключен")
+            showOutput("👁️ ESP: already disabled")
             return 
         end
         
         espEnabled = false
-        showOutput("👁️ ESP: выключен")
+        showOutput("👁️ ESP: disabled")
         
-        -- Отключаем все соединения
+        -- Disconnect all connections
         for _, connection in ipairs(espConnections) do
             if connection then
                 pcall(function() connection:Disconnect() end)
@@ -633,7 +632,7 @@ local function createESPSystem(commandConsole)
         end
         espConnections = {}
         
-        -- Удаляем все ESP элементы
+        -- Remove all ESP elements
         for player, folder in pairs(espFolders) do
             if folder then
                 pcall(function() folder:Destroy() end)
@@ -642,7 +641,7 @@ local function createESPSystem(commandConsole)
         espFolders = {}
     end
     
-    -- Функция переключения ESP
+    -- Toggle ESP function
     local function toggleESP()
         if espEnabled then
             disableESP()
@@ -651,14 +650,14 @@ local function createESPSystem(commandConsole)
         end
     end
     
-    -- Функция получения списка игроков
+    -- Get player list function
     local function getPlayerList()
         local players = Players:GetPlayers()
-        local playerList = "👥 Игроки онлайн (" .. #players .. "):\n"
+        local playerList = "👥 Players online (" .. #players .. "):\n"
         
         for _, player in ipairs(players) do
             if player == plr then
-                playerList = playerList .. "• " .. player.Name .. " (Вы)\n"
+                playerList = playerList .. "• " .. player.Name .. " (You)\n"
             else
                 playerList = playerList .. "• " .. player.Name .. "\n"
             end
@@ -677,7 +676,7 @@ local function createESPSystem(commandConsole)
 end
 
 -- ==============================
--- === Wiki System (ваш стиль) ===
+-- === Wiki System ===
 -- ==============================
 local function createWikiSystem()
     local Players = game:GetService("Players")
@@ -686,7 +685,7 @@ local function createWikiSystem()
     local TextService = game:GetService("TextService")
     local plr = Players.LocalPlayer
 
-    -- Удаляем старый GUI если есть
+    -- Remove old GUI if exists
     if plr.PlayerGui:FindFirstChild("WikiGUI") then
         plr.PlayerGui.WikiGUI:Destroy()
     end
@@ -705,25 +704,25 @@ local function createWikiSystem()
     MainFrame.Parent = WikiGUI
     MainFrame.Visible = false
 
-    -- Закругление основного фрейма
+    -- Main frame rounding
     local UICorner = Instance.new("UICorner")
     UICorner.Parent = MainFrame
     UICorner.CornerRadius = UDim.new(0, 12)
 
-    -- Тень/обводка
+    -- Shadow/border
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = MainFrame
     UIStroke.Color = Color3.new(1, 1, 1)
     UIStroke.Thickness = 2
     UIStroke.Transparency = 0.7
 
-    -- Заголовок
+    -- Title
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Size = UDim2.new(1, 0, 0, 60)
     TitleLabel.Position = UDim2.new(0, 0, 0, 0)
     TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0)
     TitleLabel.BackgroundTransparency = 0.3
-    TitleLabel.Text = "📚 WIKI - ИГРОВАЯ БАЗА ЗНАНИЙ"
+    TitleLabel.Text = "📚 WIKI - GAME KNOWLEDGE BASE"
     TitleLabel.TextColor3 = Color3.new(1, 1, 1)
     TitleLabel.TextSize = 20
     TitleLabel.ZIndex = 12
@@ -731,12 +730,12 @@ local function createWikiSystem()
     TitleLabel.BorderSizePixel = 0
     TitleLabel.Parent = MainFrame
 
-    -- Закругление заголовка
+    -- Title rounding
     local TitleCorner = Instance.new("UICorner")
     TitleCorner.Parent = TitleLabel
     TitleCorner.CornerRadius = UDim.new(0, 12)
 
-    -- Основной контейнер с контентом
+    -- Main content container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Size = UDim2.new(1, -20, 1, -80)
     ContentContainer.Position = UDim2.new(0, 10, 0, 70)
@@ -744,7 +743,7 @@ local function createWikiSystem()
     ContentContainer.BorderSizePixel = 0
     ContentContainer.Parent = MainFrame
 
-    -- Контейнер для кнопок разделов (слева)
+    -- Section buttons container (left)
     local ButtonsContainer = Instance.new("Frame")
     ButtonsContainer.Size = UDim2.new(0, 180, 1, 0)
     ButtonsContainer.Position = UDim2.new(0, 0, 0, 0)
@@ -753,19 +752,19 @@ local function createWikiSystem()
     ButtonsContainer.BorderSizePixel = 0
     ButtonsContainer.Parent = ContentContainer
 
-    -- Закругление контейнера кнопок
+    -- Buttons container rounding
     local buttonsCorner = Instance.new("UICorner")
     buttonsCorner.Parent = ButtonsContainer
     buttonsCorner.CornerRadius = UDim.new(0, 8)
 
-    -- Обводка контейнера кнопок
+    -- Buttons container border
     local buttonsStroke = Instance.new("UIStroke")
     buttonsStroke.Parent = ButtonsContainer
     buttonsStroke.Color = Color3.new(1, 1, 1)
     buttonsStroke.Thickness = 1
     buttonsStroke.Transparency = 0.5
 
-    -- Контейнер для контента (справа)
+    -- Content container (right)
     local InfoContainer = Instance.new("Frame")
     InfoContainer.Size = UDim2.new(1, -200, 1, 0)
     InfoContainer.Position = UDim2.new(0, 190, 0, 0)
@@ -775,36 +774,36 @@ local function createWikiSystem()
     InfoContainer.ClipsDescendants = true
     InfoContainer.Parent = ContentContainer
 
-    -- Закругление контейнера информации
+    -- Info container rounding
     local infoCorner = Instance.new("UICorner")
     infoCorner.Parent = InfoContainer
     infoCorner.CornerRadius = UDim.new(0, 8)
 
-    -- Обводка контейнера информации
+    -- Info container border
     local infoStroke = Instance.new("UIStroke")
     infoStroke.Parent = InfoContainer
     infoStroke.Color = Color3.new(1, 1, 1)
     infoStroke.Thickness = 1
     infoStroke.Transparency = 0.5
 
-    -- UIListLayout для кнопок
+    -- UIListLayout for buttons
     local ButtonsLayout = Instance.new("UIListLayout")
     ButtonsLayout.Padding = UDim.new(0, 8)
     ButtonsLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ButtonsLayout.Parent = ButtonsContainer
 
-    -- Padding для кнопок
+    -- Padding for buttons
     local ButtonsPadding = Instance.new("UIPadding")
     ButtonsPadding.PaddingTop = UDim.new(0, 10)
     ButtonsPadding.PaddingLeft = UDim.new(0, 10)
     ButtonsPadding.PaddingRight = UDim.new(0, 10)
     ButtonsPadding.Parent = ButtonsContainer
 
-    -- Состояние
+    -- State
     local currentSection = nil
     local currentSubSection = nil
 
-    -- Данные вики (остаются те же)
+    -- Wiki data (remains the same)
     local wikiData = {
         body = {
             name = "💪 BODY",
@@ -963,7 +962,7 @@ The Zen Temple Waterfall: 240,000,000,000.0 per hour]]
             name = "📋 QUESTS",
             subsections = {
                 quests = {
-                    name = "🎯 Все Квесты",
+                    name = "🎯 All Quests",
                     content = [[
 Mainly Quest    Requirements    Reward
 
@@ -1015,7 +1014,7 @@ Unlock Killing Intent]]
         }
     }
 
-    -- Создание кнопки раздела в вашем стиле
+    -- Create section button in your style
     local function createSectionButton(sectionKey)
         local button = Instance.new("TextButton")
         button.Name = sectionKey
@@ -1030,12 +1029,12 @@ Unlock Killing Intent]]
         button.LayoutOrder = table.find({"body", "fist", "psychic", "speed", "jump", "quests"}, sectionKey) or 0
         button.Parent = ButtonsContainer
 
-        -- Закругление кнопки
+        -- Button rounding
         local buttonCorner = Instance.new("UICorner")
         buttonCorner.Parent = button
         buttonCorner.CornerRadius = UDim.new(0, 8)
 
-        -- Обводка кнопки
+        -- Button border
         local buttonStroke = Instance.new("UIStroke")
         buttonStroke.Parent = button
         buttonStroke.Color = Color3.new(1, 1, 1)
@@ -1045,14 +1044,14 @@ Unlock Killing Intent]]
         return button
     end
 
-    -- Создание контента подраздела в вашем стиле
+    -- Create subsection content in your style
     local function createSubSectionContent(sectionKey, subKey, subData)
-        -- Очищаем предыдущий контент
+        -- Clear previous content
         for _, child in ipairs(InfoContainer:GetChildren()) do
             child:Destroy()
         end
 
-        -- Padding для InfoContainer
+        -- Padding for InfoContainer
         local infoPadding = Instance.new("UIPadding")
         infoPadding.PaddingTop = UDim.new(0, 10)
         infoPadding.PaddingLeft = UDim.new(0, 15)
@@ -1060,7 +1059,7 @@ Unlock Killing Intent]]
         infoPadding.PaddingBottom = UDim.new(0, 10)
         infoPadding.Parent = InfoContainer
 
-        -- Заголовок подраздела
+        -- Subsection title
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, 0, 0, 40)
         title.Position = UDim2.new(0, 0, 0, 0)
@@ -1075,19 +1074,19 @@ Unlock Killing Intent]]
         title.BorderSizePixel = 0
         title.Parent = InfoContainer
 
-        -- Закругление заголовка
+        -- Title rounding
         local titleCorner = Instance.new("UICorner")
         titleCorner.Parent = title
         titleCorner.CornerRadius = UDim.new(0, 8)
 
-        -- Обводка заголовка
+        -- Title border
         local titleStroke = Instance.new("UIStroke")
         titleStroke.Parent = title
         titleStroke.Color = Color3.new(1, 1, 1)
         titleStroke.Thickness = 1
         titleStroke.Transparency = 0.5
 
-        -- ScrollingFrame для контента
+        -- ScrollingFrame for content
         local scrollFrame = Instance.new("ScrollingFrame")
         scrollFrame.Size = UDim2.new(1, 0, 1, -50)
         scrollFrame.Position = UDim2.new(0, 0, 0, 45)
@@ -1100,7 +1099,7 @@ Unlock Killing Intent]]
         scrollFrame.ZIndex = 12
         scrollFrame.Parent = InfoContainer
 
-        -- Контейнер для текста внутри ScrollingFrame
+        -- Text container inside ScrollingFrame
         local textContainer = Instance.new("Frame")
         textContainer.Size = UDim2.new(1, 0, 0, 0)
         textContainer.BackgroundTransparency = 1
@@ -1108,7 +1107,7 @@ Unlock Killing Intent]]
         textContainer.ZIndex = 12
         textContainer.Parent = scrollFrame
 
-        -- Текст контента
+        -- Content text
         local contentText = Instance.new("TextLabel")
         contentText.Size = UDim2.new(1, 0, 0, 50)
         contentText.Position = UDim2.new(0, 0, 0, 0)
@@ -1125,10 +1124,10 @@ Unlock Killing Intent]]
 
         task.wait(0.05)
 
-        -- Ждем обновления размера текста
+        -- Wait for text size update
         RunService.RenderStepped:Wait()
 
-        -- Рассчитываем реальный размер текста
+        -- Calculate real text size
         local textSize = TextService:GetTextSize(
             subData.content,
             contentText.TextSize,
@@ -1136,12 +1135,12 @@ Unlock Killing Intent]]
             Vector2.new(scrollFrame.AbsoluteSize.X - 10, math.huge)
         )
 
-        -- Устанавливаем размер текста и контейнера
+        -- Set text and container size
         contentText.Size = UDim2.new(1, 0, 0, textSize.Y)
         textContainer.Size = UDim2.new(1, 0, 0, textSize.Y)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, textSize.Y)
 
-        -- Анимация появления
+        -- Appearance animation
         InfoContainer.Size = UDim2.new(0, 0, 1, 0)
         InfoContainer.Visible = true
         
@@ -1153,7 +1152,7 @@ Unlock Killing Intent]]
         return InfoContainer
     end
 
-    -- Создаем кнопки разделов
+    -- Create section buttons
     local sectionsOrder = {"body", "fist", "psychic", "speed", "jump", "quests"}
     local sectionButtons = {}
 
@@ -1186,7 +1185,7 @@ Unlock Killing Intent]]
             end
         end)
     end
-    -- Функция переключения видимости Wiki
+    -- Wiki visibility toggle function
     local function toggleWiki()
         if MainFrame.Visible then
             local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
@@ -1197,7 +1196,7 @@ Unlock Killing Intent]]
             tween.Completed:Wait()
             MainFrame.Visible = false
         else
-            -- Сбрасываем выбор
+            -- Reset selection
             for _, btn in pairs(sectionButtons) do
                 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                 btn.BackgroundTransparency = 0.2
@@ -1215,7 +1214,7 @@ Unlock Killing Intent]]
         end
     end
 
-    -- Обработчик клика вне фрейма
+    -- Click outside handler
     local function setupClickOutside()
         local background = Instance.new("TextButton")
         background.Parent = WikiGUI
@@ -1224,9 +1223,9 @@ Unlock Killing Intent]]
         background.BackgroundTransparency = 1
         background.Text = ""
         background.Visible = false
-        background.ZIndex = 0 -- Убедитесь, что фон имеет низкий ZIndex
+        background.ZIndex = 0 -- Ensure background has low ZIndex
         
-        -- Устанавливаем высокий ZIndex для всех элементов внутри MainFrame
+        -- Set high ZIndex for all elements inside MainFrame
         MainFrame.ZIndex = 10
         ButtonsContainer.ZIndex = 11
         InfoContainer.ZIndex = 11
@@ -1255,7 +1254,7 @@ Unlock Killing Intent]]
 end
 
 -- ==============================
--- === Progress GUI (ваш стиль) ===
+-- === Progress GUI ===
 -- ==============================
 local function createProgressGUI()
     if plr.PlayerGui:FindFirstChild("ProgressGUI") then
@@ -1276,61 +1275,61 @@ local function createProgressGUI()
     MainFrame.Parent = ProgressGUI
     MainFrame.Visible = false
 
-    -- Закругление основного фрейма
+    -- Main frame rounding
     local UICorner = Instance.new("UICorner")
     UICorner.Parent = MainFrame
     UICorner.CornerRadius = UDim.new(0, 12)
 
-    -- Тень/обводка
+    -- Shadow/border
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = MainFrame
     UIStroke.Color = Color3.new(1, 1, 1)
     UIStroke.Thickness = 2
     UIStroke.Transparency = 0.7
 
-    -- Заголовок
+    -- Title
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Size = UDim2.new(1, 0, 0, 60)
     TitleLabel.Position = UDim2.new(0, 0, 0, 0)
     TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0)
     TitleLabel.BackgroundTransparency = 0.3
-    TitleLabel.Text = "ОТСЛЕЖИВАНИЕ ПРОГРЕССА"
+    TitleLabel.Text = "PROGRESS TRACKING"
     TitleLabel.TextColor3 = Color3.new(1, 1, 1)
     TitleLabel.TextSize = 20
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.BorderSizePixel = 0
     TitleLabel.Parent = MainFrame
 
-    -- Закругление заголовка
+    -- Title rounding
     local TitleCorner = Instance.new("UICorner")
     TitleCorner.Parent = TitleLabel
     TitleCorner.CornerRadius = UDim.new(0, 12)
 
-    -- Информация о времени
+    -- Time information
     local TimeInfo = Instance.new("TextLabel")
     TimeInfo.Size = UDim2.new(1, -20, 0, 40)
     TimeInfo.Position = UDim2.new(0, 10, 0, 65)
     TimeInfo.BackgroundTransparency = 1
-    TimeInfo.Text = "Время: 00:00"
+    TimeInfo.Text = "Time: 00:00"
     TimeInfo.TextColor3 = Color3.new(1, 1, 1)
     TimeInfo.TextSize = 16
     TimeInfo.TextXAlignment = Enum.TextXAlignment.Left
     TimeInfo.Font = Enum.Font.Gotham
     TimeInfo.Parent = MainFrame
 
-    -- Статус отслеживания
+    -- Tracking status
     local StatusLabel = Instance.new("TextLabel")
     StatusLabel.Size = UDim2.new(1, -20, 0, 30)
     StatusLabel.Position = UDim2.new(0, 10, 0, 105)
     StatusLabel.BackgroundTransparency = 1
-    StatusLabel.Text = "Статус: Не активно"
+    StatusLabel.Text = "Status: Not active"
     StatusLabel.TextColor3 = Color3.new(1, 0.5, 0.5)
     StatusLabel.TextSize = 14
     StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
     StatusLabel.Font = Enum.Font.Gotham
     StatusLabel.Parent = MainFrame
 
-    -- Линия разделитель
+    -- Divider line
     local Divider = Instance.new("Frame")
     Divider.Size = UDim2.new(1, -20, 0, 1)
     Divider.Position = UDim2.new(0, 10, 0, 140)
@@ -1339,7 +1338,7 @@ local function createProgressGUI()
     Divider.BorderSizePixel = 0
     Divider.Parent = MainFrame
 
-    -- Контейнер для статистики
+    -- Stats container
     local StatsContainer = Instance.new("Frame")
     StatsContainer.Size = UDim2.new(1, -20, 0, 280)
     StatsContainer.Position = UDim2.new(0, 10, 0, 150)
@@ -1347,7 +1346,7 @@ local function createProgressGUI()
     StatsContainer.BorderSizePixel = 0
     StatsContainer.Parent = MainFrame
 
-    -- Функция создания строки статистики с прогрессом
+    -- Function to create stat row with progress
     local function createStatRow(parent, statName, startValue, endValue, position)
         local rowFrame = Instance.new("Frame")
         rowFrame.Parent = parent
@@ -1356,7 +1355,7 @@ local function createProgressGUI()
         rowFrame.BackgroundTransparency = 1
         rowFrame.BorderSizePixel = 0
 
-        -- Название статистики
+        -- Stat name
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Parent = rowFrame
         nameLabel.Size = UDim2.new(1, 0, 0, 20)
@@ -1368,39 +1367,39 @@ local function createProgressGUI()
         nameLabel.TextXAlignment = Enum.TextXAlignment.Left
         nameLabel.Font = Enum.Font.GothamBold
 
-        -- Начальное значение
+        -- Start value
         local startLabel = Instance.new("TextLabel")
         startLabel.Parent = rowFrame
         startLabel.Size = UDim2.new(0.45, 0, 0, 15)
         startLabel.Position = UDim2.new(0, 0, 0, 25)
         startLabel.BackgroundTransparency = 1
-        startLabel.Text = "Начало: " .. (startValue or "N/A")
+        startLabel.Text = "Start: " .. (startValue or "N/A")
         startLabel.TextColor3 = Color3.new(0.7, 0.7, 0.7)
         startLabel.TextSize = 12
         startLabel.TextXAlignment = Enum.TextXAlignment.Left
         startLabel.Font = Enum.Font.Gotham
         startLabel.Name = "StartValue"
 
-        -- Конечное значение
+        -- End value
         local endLabel = Instance.new("TextLabel")
         endLabel.Parent = rowFrame
         endLabel.Size = UDim2.new(0.45, 0, 0, 15)
         endLabel.Position = UDim2.new(0.55, 0, 0, 25)
         endLabel.BackgroundTransparency = 1
-        endLabel.Text = "Конец: " .. (endValue or "N/A")
+        endLabel.Text = "End: " .. (endValue or "N/A")
         endLabel.TextColor3 = Color3.new(0.7, 0.7, 0.7)
         endLabel.TextSize = 12
         endLabel.TextXAlignment = Enum.TextXAlignment.Left
         endLabel.Font = Enum.Font.Gotham
         endLabel.Name = "EndValue"
 
-        -- Разница
+        -- Difference
         local diffLabel = Instance.new("TextLabel")
         diffLabel.Parent = rowFrame
         diffLabel.Size = UDim2.new(1, 0, 0, 15)
         diffLabel.Position = UDim2.new(0, 0, 0, 40)
         diffLabel.BackgroundTransparency = 1
-        diffLabel.Text = "Разница: -"
+        diffLabel.Text = "Difference: -"
         diffLabel.TextColor3 = Color3.new(1, 1, 1)
         diffLabel.TextSize = 13
         diffLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1414,7 +1413,7 @@ local function createProgressGUI()
         }
     end
 
-    -- Создаем строки статистики
+    -- Create stat rows
     local statRows = {
         fs = createStatRow(StatsContainer, "Fist Strength", nil, nil, UDim2.new(0, 0, 0, 0)),
         pp = createStatRow(StatsContainer, "Psychic Power", nil, nil, UDim2.new(0, 0, 0, 55)),
@@ -1423,7 +1422,7 @@ local function createProgressGUI()
         bt = createStatRow(StatsContainer, "Body Toughness", nil, nil, UDim2.new(0, 0, 0, 220))
     }
 
-    -- Кнопки управления
+    -- Control buttons
     local buttonFrame = Instance.new("Frame")
     buttonFrame.Parent = MainFrame
     buttonFrame.Size = UDim2.new(1, -20, 0, 40)
@@ -1431,7 +1430,7 @@ local function createProgressGUI()
     buttonFrame.BackgroundTransparency = 1
     buttonFrame.BorderSizePixel = 0
 
-    -- Кнопка Start
+    -- Start button
     local StartButton = Instance.new("TextButton")
     StartButton.Parent = buttonFrame
     StartButton.Size = UDim2.new(0.3, -5, 1, 0)
@@ -1444,7 +1443,7 @@ local function createProgressGUI()
     StartButton.Font = Enum.Font.GothamBold
     StartButton.BorderSizePixel = 0
 
-    -- Кнопка Stop
+    -- Stop button
     local StopButton = Instance.new("TextButton")
     StopButton.Parent = buttonFrame
     StopButton.Size = UDim2.new(0.3, -5, 1, 0)
@@ -1457,7 +1456,7 @@ local function createProgressGUI()
     StopButton.Font = Enum.Font.GothamBold
     StopButton.BorderSizePixel = 0
 
-    -- Кнопка Close
+    -- Close button
     local CloseButton = Instance.new("TextButton")
     CloseButton.Parent = buttonFrame
     CloseButton.Size = UDim2.new(0.3, -5, 1, 0)
@@ -1470,7 +1469,7 @@ local function createProgressGUI()
     CloseButton.Font = Enum.Font.GothamBold
     CloseButton.BorderSizePixel = 0
 
-    -- Закругление кнопок
+    -- Button rounding
     local buttonCorner = Instance.new("UICorner")
     buttonCorner.Parent = StartButton
     buttonCorner.CornerRadius = UDim.new(0, 8)
@@ -1483,7 +1482,7 @@ local function createProgressGUI()
     buttonCorner3.Parent = CloseButton
     buttonCorner3.CornerRadius = UDim.new(0, 8)
 
-    -- Обводка кнопок
+    -- Button border
     local buttonStroke = Instance.new("UIStroke")
     buttonStroke.Parent = StartButton
     buttonStroke.Color = Color3.new(1, 1, 1)
@@ -1502,7 +1501,7 @@ local function createProgressGUI()
     buttonStroke3.Thickness = 1.5
     buttonStroke3.Transparency = 0.5
 
-    -- Переменные для отслеживания
+    -- Tracking variables
     local trackingActive = false
     local startStats = {}
     local endStats = {}
@@ -1510,7 +1509,7 @@ local function createProgressGUI()
     local elapsedTime = 0
     local timeConnection = nil
 
-    -- Функция форматирования времени
+    -- Time formatting function
     local function formatTime(seconds)
         local hours = math.floor(seconds / 3600)
         local minutes = math.floor((seconds % 3600) / 60)
@@ -1523,93 +1522,93 @@ local function createProgressGUI()
         end
     end
 
-    -- Функция обновления времени
+    -- Time update function
     local function updateTime()
         if trackingActive then
             elapsedTime = os.time() - startTime
-            TimeInfo.Text = "Время: " .. formatTime(elapsedTime)
+            TimeInfo.Text = "Time: " .. formatTime(elapsedTime)
         end
     end
 
-    -- Функция старта отслеживания
+    -- Start tracking function
     local function startTracking()
         startStats = getAllStatsText()
         startTime = os.time()
         trackingActive = true
         elapsedTime = 0
         
-        StatusLabel.Text = "Статус: Активно"
+        StatusLabel.Text = "Status: Active"
         StatusLabel.TextColor3 = Color3.new(0.5, 1, 0.5)
-        TimeInfo.Text = "Время: 00:00"
+        TimeInfo.Text = "Time: 00:00"
         
-        -- Обновляем начальные значения
-        statRows.fs.startLabel.Text = "Начало: " .. startStats.FistStrength
-        statRows.pp.startLabel.Text = "Начало: " .. startStats.PsychicPower
-        statRows.jf.startLabel.Text = "Начало: " .. startStats.JumpForce
-        statRows.ms.startLabel.Text = "Начало: " .. startStats.MovementSpeed
-        statRows.bt.startLabel.Text = "Начало: " .. startStats.BodyToughness
+        -- Update start values
+        statRows.fs.startLabel.Text = "Start: " .. startStats.FistStrength
+        statRows.pp.startLabel.Text = "Start: " .. startStats.PsychicPower
+        statRows.jf.startLabel.Text = "Start: " .. startStats.JumpForce
+        statRows.ms.startLabel.Text = "Start: " .. startStats.MovementSpeed
+        statRows.bt.startLabel.Text = "Start: " .. startStats.BodyToughness
         
-        -- Сбрасываем конечные значения и разницу
+        -- Reset end values and differences
         for _, row in pairs(statRows) do
-            row.endLabel.Text = "Конец: N/A"
-            row.diffLabel.Text = "Разница: -"
+            row.endLabel.Text = "End: N/A"
+            row.diffLabel.Text = "Difference: -"
             row.diffLabel.TextColor3 = Color3.new(1, 1, 1)
         end
         
-        -- Запускаем обновление времени
+        -- Start time update
         if timeConnection then
             timeConnection:Disconnect()
         end
         timeConnection = RunService.Heartbeat:Connect(updateTime)
     end
 
-    -- Функция остановки отслеживания
+    -- Stop tracking function
     local function stopTracking()
         if not trackingActive then return end
         
         endStats = getAllStatsText()
         trackingActive = false
         
-        StatusLabel.Text = "Статус: Завершено"
+        StatusLabel.Text = "Status: Completed"
         StatusLabel.TextColor3 = Color3.new(1, 1, 0.5)
         
-        -- Обновляем конечные значения
-        statRows.fs.endLabel.Text = "Конец: " .. endStats.FistStrength
-        statRows.pp.endLabel.Text = "Конец: " .. endStats.PsychicPower
-        statRows.jf.endLabel.Text = "Конец: " .. endStats.JumpForce
-        statRows.ms.endLabel.Text = "Конец: " .. endStats.MovementSpeed
-        statRows.bt.endLabel.Text = "Конец: " .. endStats.BodyToughness
+        -- Update end values
+        statRows.fs.endLabel.Text = "End: " .. endStats.FistStrength
+        statRows.pp.endLabel.Text = "End: " .. endStats.PsychicPower
+        statRows.jf.endLabel.Text = "End: " .. endStats.JumpForce
+        statRows.ms.endLabel.Text = "End: " .. endStats.MovementSpeed
+        statRows.bt.endLabel.Text = "End: " .. endStats.BodyToughness
                 
-        -- Обновляем разницу с цветами
+        -- Update differences with colors
         local fsDiff, fsColor = formatDifference(startStats.FistStrength, endStats.FistStrength)
         local ppDiff, ppColor = formatDifference(startStats.PsychicPower, endStats.PsychicPower)
         local jfDiff, jfColor = formatDifference(startStats.JumpForce, endStats.JumpForce)
         local msDiff, msColor = formatDifference(startStats.MovementSpeed, endStats.MovementSpeed)
         local btDiff, btColor = formatDifference(startStats.BodyToughness, endStats.BodyToughness)
         
-        statRows.fs.diffLabel.Text = "Разница: " .. fsDiff
+        statRows.fs.diffLabel.Text = "Difference: " .. fsDiff
         statRows.fs.diffLabel.TextColor3 = fsColor
 
-        statRows.pp.diffLabel.Text = "Разница: " .. ppDiff
+        statRows.pp.diffLabel.Text = "Difference: " .. ppDiff
         statRows.pp.diffLabel.TextColor3 = ppColor
 
-        statRows.jf.diffLabel.Text = "Разница: " .. jfDiff
+        statRows.jf.diffLabel.Text = "Difference: " .. jfDiff
         statRows.jf.diffLabel.TextColor3 = jfColor
 
-        statRows.ms.diffLabel.Text = "Разница: " .. msDiff
+        statRows.ms.diffLabel.Text = "Difference: " .. msDiff
         statRows.ms.diffLabel.TextColor3 = msColor
 
-        statRows.bt.diffLabel.Text = "Разница: " .. btDiff
+        statRows.bt.diffLabel.Text = "Difference: " .. btDiff
         statRows.bt.diffLabel.TextColor3 = btColor
         
-        -- Останавливаем обновление времени
+        -- Stop time update
         if timeConnection then
             timeConnection:Disconnect()
             timeConnection = nil
         end
     end
 
-    -- Функция показа/скрытия панели
+    -- Panel show/hide function
     local function toggleProgressPanel()
         if MainFrame.Visible then
             local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
@@ -1630,12 +1629,12 @@ local function createProgressGUI()
         end
     end
 
-    -- Подключение кнопок
+    -- Button connections
     StartButton.MouseButton1Click:Connect(startTracking)
     StopButton.MouseButton1Click:Connect(stopTracking)
     CloseButton.MouseButton1Click:Connect(toggleProgressPanel)
 
-    -- Обработчик клика вне фрейма
+    -- Click outside handler
     local function setupClickOutside()
         local background = Instance.new("TextButton")
         background.Parent = ProgressGUI
@@ -1685,12 +1684,12 @@ local function createCommandConsole()
     consoleGui.Parent = plr.PlayerGui
     consoleGui.ResetOnSpawn = false
 
-    -- Создаем TextBox (изначально скрыт)
+    -- Create TextBox (initially hidden)
     local TextBox = Instance.new("TextBox")
     TextBox.Parent = consoleGui
     TextBox.Size = UDim2.new(0, 200, 0, 43)
-    TextBox.Position = UDim2.new(0.5, -100, 1, -109) -- Центр низ, поднят на 109
-    TextBox.PlaceholderText = "Введите команду..."
+    TextBox.Position = UDim2.new(0.5, -100, 1, -109) -- Center bottom, raised by 109
+    TextBox.PlaceholderText = "Enter command..."
     TextBox.BackgroundColor3 = Color3.new(0, 0, 0)
     TextBox.BackgroundTransparency = 0.2
     TextBox.TextColor3 = Color3.new(1, 1, 1)
@@ -1699,16 +1698,16 @@ local function createCommandConsole()
     TextBox.TextYAlignment = Enum.TextYAlignment.Center
     TextBox.Visible = false
 
-    -- Закругление для TextBox
+    -- TextBox rounding
     local UICorner1 = Instance.new("UICorner")
     UICorner1.Parent = TextBox
     UICorner1.CornerRadius = UDim.new(0, 12)
 
-    -- Создаем TextButton (изначально скрыт)
+    -- Create TextButton (initially hidden)
     local TextButton = Instance.new("TextButton")
     TextButton.Parent = consoleGui
     TextButton.Size = UDim2.new(0, 80, 0, 43)
-    TextButton.Position = UDim2.new(0.5, 20, 1, -109) -- Справа от TextBox
+    TextButton.Position = UDim2.new(0.5, 20, 1, -109) -- Right of TextBox
     TextButton.Text = "OK"
     TextButton.BackgroundColor3 = Color3.new(0, 0, 0)
     TextButton.BackgroundTransparency = 0.2
@@ -1718,15 +1717,15 @@ local function createCommandConsole()
     TextButton.TextYAlignment = Enum.TextYAlignment.Center
     TextButton.Visible = false
 
-    -- Закругление для TextButton
+    -- TextButton rounding
     local UICorner2 = Instance.new("UICorner")
     UICorner2.Parent = TextButton
     UICorner2.CornerRadius = UDim.new(0, 12)
 
-    -- Output Frame (адаптивный размер) - ПЕРЕМЕЩЕН ВНИЗ СЛЕВА ОТ КОНСОЛИ
+    -- Output Frame (adaptive size) - MOVED TO BOTTOM LEFT OF CONSOLE
     local outputFrame = Instance.new("Frame")
-    outputFrame.Size = UDim2.new(0, 350, 0, 0) -- Начальная высота 0
-    outputFrame.Position = UDim2.new(0, 20, 1, -200) -- Слева внизу, выше консоли
+    outputFrame.Size = UDim2.new(0, 350, 0, 0) -- Initial height 0
+    outputFrame.Position = UDim2.new(0, 20, 1, -200) -- Left bottom, above console
     outputFrame.BackgroundColor3 = Color3.new(0, 0, 0)
     outputFrame.BackgroundTransparency = 0.15
     outputFrame.BorderSizePixel = 0
@@ -1734,12 +1733,12 @@ local function createCommandConsole()
     outputFrame.Parent = consoleGui
     outputFrame.ClipsDescendants = true
 
-    -- Закругление output frame
+    -- Output frame rounding
     local outputCorner = Instance.new("UICorner")
     outputCorner.Parent = outputFrame
     outputCorner.CornerRadius = UDim.new(0, 12)
 
-    -- Обводка output frame
+    -- Output frame border
     local outputStroke = Instance.new("UIStroke")
     outputStroke.Parent = outputFrame
     outputStroke.Color = Color3.new(1, 1, 1)
@@ -1747,7 +1746,7 @@ local function createCommandConsole()
     outputStroke.Transparency = 0.7
 
     local outputLabel = Instance.new("TextLabel")
-    outputLabel.Size = UDim2.new(1, -20, 0, 0) -- Авто-высота
+    outputLabel.Size = UDim2.new(1, -20, 0, 0) -- Auto-height
     outputLabel.Position = UDim2.new(0, 10, 0, 10)
     outputLabel.BackgroundTransparency = 1
     outputLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -1760,38 +1759,38 @@ local function createCommandConsole()
     outputLabel.Parent = outputFrame
     outputLabel.AutomaticSize = Enum.AutomaticSize.Y 
 
-    -- Переменная для отслеживания состояния
+    -- Variable for tracking state
     local isExpanded = false
 
-    -- История команд
+    -- Command history
     local history = {}
     local historyIndex = 0
 
-    -- Функция для показа вывода с адаптивным размером и анимацией
+    -- Function to show output with adaptive size and animation
     local function showOutput(text)
         outputLabel.Text = tostring(text or "")
         
-        -- Ждем обновления размера текста
+        -- Wait for text size update
         task.wait(0.05)
         
-        -- Устанавливаем высоту фрейма по высоте текста + отступы
+        -- Set frame height based on text height + padding
         local textHeight = outputLabel.TextBounds.Y
-        local frameHeight = math.min(textHeight + 20, 600) -- Максимальная высота 300
+        local frameHeight = math.min(textHeight + 20, 600) -- Maximum height 300
         
-        -- Анимация появления output frame
+        -- Output frame appearance animation
         outputFrame.Size = UDim2.new(0, 350, 0, 0)
         outputFrame.Position = UDim2.new(0, 20, 1, -200)
         outputFrame.Visible = true
         
         local tween = TweenService:Create(outputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 350, 0, frameHeight),
-            Position = UDim2.new(0, 20, 1, -200 - frameHeight) -- Поднимаем вверх на высоту фрейма
+            Position = UDim2.new(0, 20, 1, -200 - frameHeight) -- Move up by frame height
         })
         tween:Play()
         
         task.delay(20, function()
             if outputFrame.Visible then
-                -- Анимация исчезновения
+                -- Disappearance animation
                 local hideTween = TweenService:Create(outputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
                     Size = UDim2.new(0, 350, 0, 0),
                     Position = UDim2.new(0, 20, 1, -200)
@@ -1803,10 +1802,10 @@ local function createCommandConsole()
         end)
     end
 
-    -- Функция для анимации выдвижения/задвижения консоли
+    -- Function for console slide in/out animation
     local function toggleInterface()
         if isExpanded then
-            -- Задвигаем интерфейс с анимацией
+            -- Slide interface out with animation
             local tween1 = TweenService:Create(TextBox, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
                 Position = UDim2.new(0.5, -100, 1, -109),
                 Size = UDim2.new(0, 0, 0, 43)
@@ -1824,7 +1823,7 @@ local function createCommandConsole()
                 TextButton.Visible = false
             end)
         else
-            -- Выдвигаем интерфейс с анимацией
+            -- Slide interface in with animation
             TextBox.Visible = true
             TextButton.Visible = true
             
@@ -1915,15 +1914,15 @@ local function createCommandConsole()
 
     local function startFS()
         if fsActive then
-            showOutput("FS: уже включён")
+            showOutput("FS: already enabled")
             return
         end
         fsActive = true
-        showOutput("FS: включён.")
+        showOutput("FS: enabled.")
 
         local equipOk = equipFistTool()
         if not equipOk then
-            showOutput("FS: не удалось найти инструмент: " .. FIST_TOOL_NAME)
+            showOutput("FS: failed to find tool: " .. FIST_TOOL_NAME)
             fsActive = false
             return
         end
@@ -1953,7 +1952,7 @@ local function createCommandConsole()
                     if dist > MAX_DISTANCE_FROM_POINT then
                         safeTeleportTo(zoneCFrame)
                         equipFistTool()
-                        showOutput("FS: откинули — возвращаюсь на " .. zoneName)
+                        showOutput("FS: knocked back — returning to " .. zoneName)
                     end
                 end
 
@@ -1964,11 +1963,11 @@ local function createCommandConsole()
 
     local function stopFS()
         if not fsActive then
-            showOutput("FS: уже выключен")
+            showOutput("FS: already stopped")
             return
         end
         fsActive = false
-        showOutput("FS: остановлен")
+        showOutput("FS: stopped")
         for _, conn in ipairs(fsConnections) do
             if conn and conn.Disconnect then
                 pcall(function() conn:Disconnect() end)
@@ -2029,7 +2028,7 @@ local function createCommandConsole()
     end
 
     local function handleRespawnRecovery()
-        showOutput("AUTOTP: обработка респавна...")
+        showOutput("AUTOTP: handling respawn...")
         repeat task.wait(0.3) until plr.Character and plr.Character:FindFirstChild("Humanoid")
         task.wait(0.5)
 
@@ -2045,20 +2044,20 @@ local function createCommandConsole()
                     equipFistTool()
                     safeTeleportTo(zoneCFrame)
                     startFS()
-                    showOutput("AUTOTP: вернулся на FS-зону: " .. tostring(zoneName))
+                    showOutput("AUTOTP: returned to FS zone: " .. tostring(zoneName))
                 end)
             else
-                showOutput("AUTOTP: не удалось определить FS-зону")
+                showOutput("AUTOTP: failed to determine FS zone")
             end
         else
             if lastGroundPosition then
                 pcall(function()
                     local cf = CFrame.new(lastGroundPosition + Vector3.new(0,3,0))
                     safeTeleportTo(cf)
-                    showOutput("AUTOTP: возвращаюсь к последней позиции")
+                    showOutput("AUTOTP: returning to last position")
                 end)
             else
-                showOutput("AUTOTP: нет сохранённой позиции")
+                showOutput("AUTOTP: no saved position")
             end
         end
         cleanupVisuals()
@@ -2100,11 +2099,11 @@ local function createCommandConsole()
 
     local function startAutotp()
         if autotpActive then
-            showOutput("AUTOTP: уже включён")
+            showOutput("AUTOTP: already enabled")
             return
         end
         autotpActive = true
-        showOutput("AUTOTP: включён")
+        showOutput("AUTOTP: enabled")
 
         startPositionTracker()
         ensureCharacterAddedHandler()
@@ -2120,11 +2119,11 @@ local function createCommandConsole()
 
     local function stopAutotp()
         if not autotpActive then
-            showOutput("AUTOTP: уже выключен")
+            showOutput("AUTOTP: already disabled")
             return
         end
         autotpActive = false
-        showOutput("AUTOTP: отключён")
+        showOutput("AUTOTP: disabled")
         clearAutotpConnections()
         stopPositionTracker()
     end
@@ -2174,19 +2173,19 @@ local function createCommandConsole()
 
     local function startBT()
         if btActive then
-            showOutput("BT: уже включён")
+            showOutput("BT: already enabled")
             return
         end
 
         if fsActive then
             stopFS()
-            showOutput("FS: отключён (BT активирован)")
+            showOutput("FS: stopped (BT activated)")
         end
 
         btActive = true
         local zone = chooseBTZone()
         safeTeleportTo(zone)
-        showOutput("BT: включён и телепортирован")
+        showOutput("BT: enabled and teleported")
 
         btLoopCoroutine = task.spawn(function()
             while btActive do
@@ -2205,35 +2204,35 @@ local function createCommandConsole()
 
     local function stopBT()
         if not btActive then
-            showOutput("BT: уже выключен")
+            showOutput("BT: already stopped")
             return
         end
         btActive = false
-        showOutput("BT: выключен")
+        showOutput("BT: stopped")
     end
 
-    -- Создаем панели
+    -- Create panels
     local statsPanel = createStatsGUI()
     local progressPanel = createProgressGUI()
     local ESPSystem = createESPSystem()
     local wikiSystem = createWikiSystem()
 
-    -- Основная функция обработки команд
+    -- Main command handler function
     local function handleCommand(message)
         local command = string.lower(message)
         
         if command == "help" then
             outputFrame.Size = UDim2.new(0, 350, 0, 900)
-            showOutput("📚 ДОСТУПНЫЕ КОМАНДЫ:\n\n📊 Основные:\nstats - открыть статистику\nts - начать отслеживание\ntss - остановить отслеживание\ntsg - открыть панель прогресса\nclear - очистить вывод\n\n👊 FS Автофарм:\nfs on - включить автофарм FS\nfs off - выключить автофарм FS\nrock - телепорт на Rock\ncrystal - телепорт на Crystal\nbluegod - телепорт на Blue God Star\ngreengod - телепорт на Green God Star\nredgod - телепорт на Red God Star\n\n🛡️ BT Автотренировка:\nbt on - включить автотренировку BT\nbt off - выключить автотренировку BT\n\n⚡ Авто-системы:\nautotp on - включить авто-возврат\nautotp off - выключить авто-возврат\n\n👁️ ESP команды:\nesp on - включить ESP\nesp off - выключить ESP\nesp toggle - переключить ESP\nplayers - список игроков\ntp @Имя - телепорт к игроку")
+            showOutput("📚 AVAILABLE COMMANDS:\n\n📊 Main:\nstats - open statistics\nts - start tracking\ntss - stop tracking\ntsg - open progress panel\nclear - clear output\n\n👊 FS Autofarm:\nfs on - enable FS autofarm\nfs off - disable FS autofarm\nrock - teleport to Rock\ncrystal - teleport to Crystal\nbluegod - teleport to Blue God Star\ngreengod - teleport to Green God Star\nredgod - teleport to Red God Star\n\n🛡️ BT Autotrain:\nbt on - enable BT autotrain\nbt off - disable BT autotrain\n\n⚡ Auto-systems:\nautotp on - enable auto-return\nautotp off - disable auto-return\n\n👁️ ESP commands:\nesp on - enable ESP\nesp off - disable ESP\nesp toggle - toggle ESP\nplayers - player list\ntp @Name - teleport to player")
 
-         -- ESP команды
+         -- ESP commands
         elseif command == "esp on" then
             ESPSystem.enable()
-            showOutput("👁️ ESP: включен")
+            showOutput("👁️ ESP: enabled")
         
         elseif command == "esp off" then
             ESPSystem.disable()
-            showOutput("👁️ ESP: выключен")
+            showOutput("👁️ ESP: disabled")
         
         elseif command == "esp toggle" then
             ESPSystem.toggle()
@@ -2247,54 +2246,54 @@ local function createCommandConsole()
             if playerName and playerName ~= "" then
                 ESPSystem.teleportToPlayerByName(playerName)
             else
-                showOutput("❌ Укажите имя игрока: tp @ИмяИгрока")
+                showOutput("❌ Specify player name: tp @PlayerName")
             end
 
-        -- Основные команды
+        -- Main commands
         elseif command == "stats" then
             statsPanel.toggle()
-            showOutput("📊 Открываю статистику...")
+            showOutput("📊 Opening statistics...")
         
         elseif command == "ts" then
             progressPanel.startTracking()
-            showOutput("📈 Начало отслеживания прогресса")
+            showOutput("📈 Starting progress tracking")
         
         elseif command == "tss" then
             progressPanel.stopTracking()
-            showOutput("📉 Остановка отслеживания")
+            showOutput("📉 Stopping tracking")
         
         elseif command == "tsg" then
             progressPanel.toggle()
-            showOutput("📊 Открываю панель прогресса")
+            showOutput("📊 Opening progress panel")
         
         elseif command == "clear" then
             outputLabel.Text = ""
-            showOutput("🧹 Вывод очищен")
+            showOutput("🧹 Output cleared")
             
         elseif command == "wiki" then
             wikiSystem.toggle()
-            showOutput("📚 Wiki: " .. (wikiSystem.gui.MainFrame.Visible and "открыта" or "закрыта"))
+            showOutput("📚 Wiki: " .. (wikiSystem.gui.MainFrame.Visible and "opened" or "closed"))
 
-        -- FS команды
+        -- FS commands
         elseif command == "fs on" then
             startFS()
         
         elseif command == "fs off" then
             stopFS()
 
-        -- Телепорты FS
+        -- FS teleports
         elseif FS_LOCATIONS[command] then
             teleportTo(FS_LOCATIONS[command])
-            showOutput("🔄 Телепортация: " .. command)
+            showOutput("🔄 Teleporting: " .. command)
 
-        -- BT команды
+        -- BT commands
         elseif command == "bt on" then
             startBT()
         
         elseif command == "bt off" then
             stopBT()
 
-        -- AUTOTP команды
+        -- AUTOTP commands
         elseif command == "autotp on" then
             startAutotp()
         
@@ -2302,15 +2301,15 @@ local function createCommandConsole()
             stopAutotp()
         
         else
-            showOutput("❌ Неизвестная команда: " .. command .. "\nВведите 'help' для списка команд.")
+            showOutput("❌ Unknown command: " .. command .. "\nType 'help' for command list.")
         end
         
-        -- Добавляем в историю
+        -- Add to history
         table.insert(history, message)
         historyIndex = #history + 1
     end
 
-    -- Обработчики ввода
+    -- Input handlers
     TextButton.MouseButton1Click:Connect(function()
         local message = TextBox.Text
         if message ~= "" then
@@ -2329,7 +2328,7 @@ local function createCommandConsole()
         end
     end)
 
-    -- Горячие клавиши
+    -- Hotkeys
     UIS.InputBegan:Connect(function(input, processed)
         if processed then return end
         
@@ -2350,13 +2349,13 @@ end
 
 
 -- ==============================
--- === Инициализация системы ===
+-- === System Initialization ===
 -- ==============================
 local statsPanel = createStatsGUI()
 local progressPanel = createProgressGUI()
 local commandConsole = createCommandConsole()
 
--- Горячие клавиши для быстрого доступа
+-- Hotkeys for quick access
 local UIS = game:GetService("UserInputService")
 UIS.InputBegan:Connect(function(input, processed)
     if processed then return end
