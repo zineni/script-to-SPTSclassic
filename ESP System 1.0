@@ -1,0 +1,331 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Utility = require(script.Parent.Utility)
+
+local ESPSystem = {}
+ESPSystem.__index = ESPSystem
+
+function ESPSystem.new(commandConsole)
+    local self = setmetatable({}, ESPSystem)
+    self.plr = Players.LocalPlayer
+    self.commandConsole = commandConsole
+    self.enabled = false
+    self.espFolders = {}
+    self.connections = {}
+    self.gui = nil
+    
+    return self
+end
+
+function ESPSystem:showOutput(text)
+    if self.commandConsole and self.commandConsole.showOutput then
+        self.commandConsole.showOutput(text)
+    else
+        print("[ESP]: " .. text)
+    end
+end
+
+function ESPSystem:init()
+    self.gui = Utility.createUIElement("ScreenGui", {
+        Name = "ESPGui",
+        ResetOnSpawn = false,
+        Parent = self.plr.PlayerGui
+    })
+end
+
+function ESPSystem:createPlayerESP(player)
+    if player == self.plr then return end
+    
+    local character = player.Character
+    if not character then return end
+
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoidRootPart or not humanoid then return end
+
+    -- Create ESP folder for player
+    local espFolder = Utility.createUIElement("Folder", {
+        Name = player.Name,
+        Parent = self.gui
+    })
+    self.espFolders[player] = espFolder
+
+    -- Billboard GUI
+    local billboard = Utility.createUIElement("BillboardGui", {
+        Size = UDim2.new(0, 100, 0, 25),
+        ExtentsOffset = Vector3.new(0, 3, 0),
+        AlwaysOnTop = true,
+        Enabled = true,
+        Active = true,
+        Parent = espFolder
+    })
+
+    -- Attach to head or HRP
+    local head = character:FindFirstChild("Head")
+    billboard.Adornee = head or humanoidRootPart
+
+    -- Name background
+    local nameBg = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, 0, 0, 25),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        Parent = billboard
+    })
+
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = nameBg})
+    Utility.createUIElement("UIStroke", {
+        Color = Color3.new(1, 1, 1),
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = nameBg
+    })
+
+    -- Clickable name label
+    local nameLabel = Utility.createUIElement("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = player.Name,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextWrapped = true,
+        AutoButtonColor = false,
+        Active = true,
+        Parent = nameBg
+    })
+
+    -- Distance label
+    local distanceLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 15),
+        Position = UDim2.new(0, 0, 0, 25),
+        BackgroundTransparency = 1,
+        Text = "0 studs",
+        TextColor3 = Color3.new(0.8, 0.8, 0.8),
+        TextSize = 10,
+        Font = Enum.Font.Gotham,
+        Parent = billboard
+    })
+
+    -- Teleport on click
+    nameLabel.MouseButton1Click:Connect(function()
+        self:teleportToPlayer(player)
+    end)
+
+    -- Hover effects
+    self:setupHoverEffects(nameLabel, nameBg)
+
+    -- Distance tracking
+    self:setupDistanceTracking(player, character, humanoid, distanceLabel, nameLabel)
+end
+
+function ESPSystem:setupHoverEffects(nameLabel, nameBg)
+    nameLabel.MouseEnter:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2)
+        
+        TweenService:Create(nameBg, tweenInfo, {
+            BackgroundTransparency = 0.1,
+            BackgroundColor3 = Color3.new(0.1, 0.3, 0.1)
+        }):Play()
+        
+        TweenService:Create(nameLabel, tweenInfo, {
+            TextColor3 = Color3.new(0, 1, 0)
+        }):Play()
+    end)
+
+    nameLabel.MouseLeave:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2)
+        
+        TweenService:Create(nameBg, tweenInfo, {
+            BackgroundTransparency = 0.3,
+            BackgroundColor3 = Color3.new(0, 0, 0)
+        }):Play()
+        
+        TweenService:Create(nameLabel, tweenInfo, {
+            TextColor3 = Color3.new(1, 1, 1)
+        }):Play()
+    end)
+end
+
+function ESPSystem:setupDistanceTracking(player, character, humanoid, distanceLabel, nameLabel)
+    local connection = RunService.Heartbeat:Connect(function()
+        if not self.enabled then return end
+        
+        local localChar = self.plr.Character
+        local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
+        local targetHrp = character:FindFirstChild("HumanoidRootPart")
+        
+        if localHrp and targetHrp and humanoid.Health > 0 then
+            local distance = (localHrp.Position - targetHrp.Position).Magnitude
+            distanceLabel.Text = string.format("%.0f studs", distance)
+            
+            -- Color coding based on distance
+            if distance < 20 then
+                nameLabel.TextColor3 = Color3.new(1, 0.2, 0.2) -- Red (close)
+            elseif distance < 50 then
+                nameLabel.TextColor3 = Color3.new(1, 0.8, 0.2) -- Orange
+            else
+                nameLabel.TextColor3 = Color3.new(0.2, 1, 0.2) -- Green (far)
+            end
+        else
+            distanceLabel.Text = "N/A"
+        end
+    end)
+    
+    table.insert(self.connections, connection)
+end
+
+function ESPSystem:teleportToPlayer(player)
+    local targetChar = player.Character
+    if not targetChar then
+        self:showOutput("❌ Player " .. player.Name .. " has no character")
+        return
+    end
+    
+    local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetHrp then
+        self:showOutput("❌ Cannot find HumanoidRootPart for " .. player.Name)
+        return
+    end
+    
+    -- Teleport to safe distance
+    local targetCFrame = targetHrp.CFrame + targetHrp.CFrame.LookVector * -8 + Vector3.new(0, 3, 0)
+    
+    if self:safeTeleport(targetCFrame) then
+        self:showOutput("🎯 Teleported to player: " .. player.Name)
+    else
+        self:showOutput("❌ Teleport error to " .. player.Name)
+    end
+end
+
+function ESPSystem:safeTeleport(cf)
+    local char = self.plr.Character
+    if not char then return false end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    return pcall(function()
+        hrp.CFrame = cf
+    end)
+end
+
+function ESPSystem:removePlayerESP(player)
+    if self.espFolders[player] then
+        self.espFolders[player]:Destroy()
+        self.espFolders[player] = nil
+    end
+end
+
+function ESPSystem:enable()
+    if self.enabled then 
+        self:showOutput("👁️ ESP: already enabled")
+        return 
+    end
+    
+    self.enabled = true
+    self:showOutput("👁️ ESP: enabled - click on player names to teleport!")
+    
+    -- Create ESP for existing players
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= self.plr then
+            pcall(function() self:createPlayerESP(player) end)
+        end
+    end
+    
+    -- Set up event handlers
+    self:setupEventHandlers()
+end
+
+function ESPSystem:setupEventHandlers()
+    -- Player added
+    local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+        if self.enabled then
+            pcall(function() self:createPlayerESP(player) end)
+        end
+    end)
+    table.insert(self.connections, playerAddedConn)
+    
+    -- Player leaving
+    local playerRemovingConn = Players.PlayerRemoving:Connect(function(player)
+        pcall(function() self:removePlayerESP(player) end)
+    end)
+    table.insert(self.connections, playerRemovingConn)
+    
+    -- Character respawn
+    local characterAddedConn = self.plr.CharacterAdded:Connect(function()
+        if self.enabled then
+            -- Recreate ESP for all players
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= self.plr then
+                    pcall(function() self:removePlayerESP(player) end)
+                    pcall(function() self:createPlayerESP(player) end)
+                end
+            end
+        end
+    end)
+    table.insert(self.connections, characterAddedConn)
+end
+
+function ESPSystem:disable()
+    if not self.enabled then 
+        self:showOutput("👁️ ESP: already disabled")
+        return 
+    end
+    
+    self.enabled = false
+    self:showOutput("👁️ ESP: disabled")
+    
+    -- Clean up connections
+    for _, connection in ipairs(self.connections) do
+        if connection then
+            pcall(function() connection:Disconnect() end)
+        end
+    end
+    self.connections = {}
+    
+    -- Remove ESP elements
+    for player, folder in pairs(self.espFolders) do
+        if folder then
+            pcall(function() folder:Destroy() end)
+        end
+    end
+    self.espFolders = {}
+end
+
+function ESPSystem:toggle()
+    if self.enabled then
+        self:disable()
+    else
+        self:enable()
+    end
+end
+
+function ESPSystem:getPlayerList()
+    local players = Players:GetPlayers()
+    local playerList = "👥 Players online (" .. #players .. "):\n"
+    
+    for _, player in ipairs(players) do
+        if player == self.plr then
+            playerList = playerList .. "• " .. player.Name .. " (You)\n"
+        else
+            playerList = playerList .. "• " .. player.Name .. "\n"
+        end
+    end
+    
+    return playerList
+end
+
+function ESPSystem:teleportToPlayerByName(playerName)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Name:lower() == playerName:lower() and player ~= self.plr then
+            self:teleportToPlayer(player)
+            return
+        end
+    end
+    self:showOutput("❌ Player not found: " .. playerName)
+end
+
+return ESPSystem
