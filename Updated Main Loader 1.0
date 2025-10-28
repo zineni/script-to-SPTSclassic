@@ -1,0 +1,59 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+-- Module imports
+local StatsSystem = require(script.StatsSystem)
+local ProgressSystem = require(script.ProgressSystem)
+local WikiSystem = require(script.WikiSystem)
+local ESPSystem = require(script.ESPSystem)
+local CommandConsole = require(script.CommandConsole)
+
+local Main = {}
+Main.systems = {}
+
+function Main:init()
+    print("🎮 Initializing game systems...")
+    
+    -- Initialize systems
+    self.systems.statsSystem = StatsSystem.new()
+    self.systems.statsSystem:createGUI()
+    
+    self.systems.progressSystem = ProgressSystem.new()
+    self.systems.progressSystem:createGUI()
+    
+    self.systems.wikiSystem = WikiSystem.new()
+    self.systems.wikiSystem:createGUI()
+    
+    self.systems.espSystem = ESPSystem.new()
+    self.systems.espSystem:init()
+    
+    -- Command console needs reference to other systems
+    self.systems.commandConsole = CommandConsole.new()
+    self.systems.commandConsole:init(self.systems)
+    
+    -- Set up hotkeys
+    self:setupHotkeys()
+    
+    print("✅ All game systems loaded successfully!")
+    print("🎯 Press F2 to open command console")
+    print("📊 Press RightShift for statistics")
+end
+
+function Main:setupHotkeys()
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        
+        if input.KeyCode == Enum.KeyCode.RightShift then
+            pcall(function() self.systems.statsSystem:toggle() end)
+        elseif input.KeyCode == Enum.KeyCode.RightControl then
+            pcall(function() self.systems.progressSystem:toggle() end)
+        elseif input.KeyCode == Enum.KeyCode.F3 then
+            pcall(function() self.systems.wikiSystem:toggle() end)
+        end
+    end)
+end
+
+-- Initialize the main system
+Main:init()
+
+return Main
