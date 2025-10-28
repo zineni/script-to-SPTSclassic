@@ -1,0 +1,131 @@
+-- Services
+local Players = game:GetService("Players")
+local TextService = game:GetService("TextService")
+local TweenService = game:GetService("TweenService")
+
+local Utility = {}
+
+-- Number parsing and formatting
+function Utility.parseStatValue(valueStr)
+    if not valueStr or valueStr == "N/A" then return 0 end
+    
+    local s = tostring(valueStr):gsub("%s+", ""):lower()
+    local asNum = tonumber(s)
+    if asNum then return asNum end
+
+    local multipliers = {k = 1e3, m = 1e6, b = 1e9, t = 1e12}
+    local numPart, suffix = string.match(s, "^([%d%.]+)%s*([kmbt]?)$")
+    
+    if numPart then
+        local n = tonumber(numPart) or 0
+        return suffix ~= "" and n * (multipliers[suffix] or 1) or n
+    end
+    
+    return tonumber(string.match(s, "[%d%.]+") or 0) or 0
+end
+
+function Utility.formatNumberShort(num)
+    num = num or 0
+    local absNum = math.abs(num)
+    
+    local formats = {
+        {threshold = 1e12, format = "%.2fT"},
+        {threshold = 1e9, format = "%.2fB"},
+        {threshold = 1e6, format = "%.2fM"},
+        {threshold = 1e3, format = "%.2fK"}
+    }
+    
+    for _, fmt in ipairs(formats) do
+        if absNum >= fmt.threshold then
+            return string.format(fmt.format, num / fmt.threshold)
+        end
+    end
+    
+    return tostring(math.floor(num))
+end
+
+-- GUI element utilities
+function Utility.safeGetGui(pathFunc)
+    local success, result = pcall(pathFunc)
+    return success and result or nil
+end
+
+function Utility.getValueFromTextObject(textObject)
+    if not textObject then return "N/A" end
+    
+    return pcall(function()
+        local text = tostring(textObject.Text or "")
+        return string.match(text, ":%s*(.+)$") or string.match(text, "([^%s]+)$") or text
+    end) or "N/A"
+end
+
+-- Player stats getters
+function Utility.getAllStats()
+    local function getStat(pathFunc, fallback)
+        local obj = Utility.safeGetGui(pathFunc)
+        return Utility.getValueFromTextObject(obj)
+    end
+    
+    return {
+        FistStrength = getStat(function() return Players.LocalPlayer.PlayerGui.ScreenGui.MenuFrame.InfoFrame.FSTxt end),
+        PsychicPower = getStat(function() return Players.LocalPlayer.PlayerGui.ScreenGui.MenuFrame.InfoFrame.PPTxt end),
+        JumpForce = getStat(function() return Players.LocalPlayer.PlayerGui.ScreenGui.MenuFrame.InfoFrame.JFTxt end),
+        MovementSpeed = getStat(function() return Players.LocalPlayer.PlayerGui.ScreenGui.MenuFrame.InfoFrame.MSTxt end),
+        BodyToughness = getStat(function() return Players.LocalPlayer.PlayerGui.ScreenGui.MenuFrame.InfoFrame.BTTxt end)
+    }
+end
+
+-- Difference calculation with color coding
+function Utility.formatDifference(startVal, endVal)
+    local startNum = Utility.parseStatValue(startVal)
+    local endNum = Utility.parseStatValue(endVal)
+    local diff = endNum - startNum
+    
+    if diff == 0 then
+        return "0", Color3.new(1, 1, 1)
+    elseif diff > 0 then
+        return "+" .. Utility.formatNumberShort(diff), Color3.new(0, 1, 0)
+    else
+        return Utility.formatNumberShort(diff), Color3.new(1, 0, 0)
+    end
+end
+
+-- UI element factory
+function Utility.createUIElement(className, properties)
+    local element = Instance.new(className)
+    for property, value in pairs(properties) do
+        element[property] = value
+    end
+    return element
+end
+
+-- Styled frame creator
+function Utility.createStyledFrame(name, size, position, parent)
+    local frame = Utility.createUIElement("Frame", {
+        Name = name,
+        Size = size,
+        Position = position,
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+    
+    -- Add rounded corners
+    Utility.createUIElement("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = frame
+    })
+    
+    -- Add border stroke
+    Utility.createUIElement("UIStroke", {
+        Color = Color3.new(1, 1, 1),
+        Thickness = 2,
+        Transparency = 0.7,
+        Parent = frame
+    })
+    
+    return frame
+end
+
+return Utility
