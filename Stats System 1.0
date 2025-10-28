@@ -1,0 +1,227 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local Utility = require(script.Parent.Utility)
+
+local StatsSystem = {}
+StatsSystem.__index = StatsSystem
+
+function StatsSystem.new()
+    local self = setmetatable({}, StatsSystem)
+    self.plr = Players.LocalPlayer
+    self.gui = nil
+    self.isVisible = false
+    return self
+end
+
+function StatsSystem:createGUI()
+    -- Remove existing GUI
+    if self.plr.PlayerGui:FindFirstChild("StatsGUI") then
+        self.plr.PlayerGui.StatsGUI:Destroy()
+    end
+
+    -- Create main container
+    self.gui = Utility.createUIElement("ScreenGui", {
+        Name = "StatsGUI",
+        ResetOnSpawn = false,
+        Parent = self.plr.PlayerGui
+    })
+
+    -- Main frame
+    local mainFrame = Utility.createStyledFrame("MainFrame", 
+        UDim2.new(0, 300, 0, 350),
+        UDim2.new(0.5, -150, 0.5, -175),
+        self.gui
+    )
+    mainFrame.Visible = false
+    self.mainFrame = mainFrame
+
+    -- Title
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 50),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        Text = "PLAYER STATISTICS",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 18,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = mainFrame
+    })
+
+    -- Player name
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 30),
+        Position = UDim2.new(0, 10, 0, 55),
+        BackgroundTransparency = 1,
+        Text = "Player: " .. self.plr.Name,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        Parent = mainFrame
+    })
+
+    -- Stats display
+    self:createStatsDisplay(mainFrame)
+    self:setupInteractions(mainFrame)
+    self:setupAutoUpdate()
+
+    return self
+end
+
+function StatsSystem:createStatsDisplay(parent)
+    local container = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, -20, 0, 200),
+        Position = UDim2.new(0, 10, 0, 100),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    self.statLabels = {
+        FistStrength = self:createStatRow(container, "Fist Strength", 0),
+        PsychicPower = self:createStatRow(container, "Psychic Power", 35),
+        JumpForce = self:createStatRow(container, "Jump Force", 70),
+        MovementSpeed = self:createStatRow(container, "Movement Speed", 105),
+        BodyToughness = self:createStatRow(container, "Body Toughness", 140)
+    }
+end
+
+function StatsSystem:createStatRow(parent, label, yOffset)
+    local row = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, yOffset),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    -- Label
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(0.6, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = label,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        Parent = row
+    })
+
+    -- Value
+    local valueLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(0.4, 0, 1, 0),
+        Position = UDim2.new(0.6, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "N/A",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Font = Enum.Font.GothamBold,
+        Parent = row
+    })
+
+    return valueLabel
+end
+
+function StatsSystem:updateStats()
+    local stats = Utility.getAllStats()
+    
+    for statName, label in pairs(self.statLabels) do
+        label.Text = stats[statName]
+    end
+end
+
+function StatsSystem:setupInteractions(parent)
+    -- Close button
+    local closeButton = Utility.createUIElement("TextButton", {
+        Size = UDim2.new(1, -20, 0, 40),
+        Position = UDim2.new(0, 10, 1, -50),
+        BackgroundColor3 = Color3.new(0.8, 0.2, 0.2),
+        BackgroundTransparency = 0.2,
+        Text = "CLOSE",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    -- Style close button
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = closeButton})
+    Utility.createUIElement("UIStroke", {
+        Color = Color3.new(1, 1, 1),
+        Thickness = 1.5,
+        Transparency = 0.5,
+        Parent = closeButton
+    })
+
+    closeButton.MouseButton1Click:Connect(function()
+        self:toggle()
+    end)
+
+    -- Click outside to close
+    self:setupClickOutside()
+end
+
+function StatsSystem:setupClickOutside()
+    local background = Utility.createUIElement("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Visible = false,
+        Parent = self.gui
+    })
+
+    background.MouseButton1Click:Connect(function()
+        if self.isVisible then
+            self:toggle()
+        end
+    end)
+
+    self.mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        background.Visible = self.mainFrame.Visible
+    end)
+end
+
+function StatsSystem:setupAutoUpdate()
+    task.spawn(function()
+        while true do
+            task.wait(5)
+            if self.isVisible then
+                self:updateStats()
+            end
+        end
+    end)
+end
+
+function StatsSystem:toggle()
+    if self.isVisible then
+        -- Hide with animation
+        local tween = TweenService:Create(self.mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        })
+        tween:Play()
+        tween.Completed:Wait()
+        self.mainFrame.Visible = false
+    else
+        -- Show with animation
+        self:updateStats()
+        self.mainFrame.Visible = true
+        self.mainFrame.Size = UDim2.new(0, 0, 0, 0)
+        
+        local tween = TweenService:Create(self.mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 300, 0, 350)
+        })
+        tween:Play()
+    end
+    
+    self.isVisible = not self.isVisible
+end
+
+return StatsSystem
