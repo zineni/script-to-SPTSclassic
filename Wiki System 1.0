@@ -1,0 +1,545 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
+
+local Utility = require(script.Parent.Utility)
+
+local WikiSystem = {}
+WikiSystem.__index = WikiSystem
+
+function WikiSystem.new()
+    local self = setmetatable({}, WikiSystem)
+    self.plr = Players.LocalPlayer
+    self.gui = nil
+    self.isVisible = false
+    self.currentSection = nil
+    self.currentSubSection = nil
+    self.sectionButtons = {}
+    
+    -- Wiki data
+    self.wikiData = self:getWikiData()
+    
+    return self
+end
+
+function WikiSystem:getWikiData()
+    return {
+        body = {
+            name = "💪 BODY",
+            subsections = {
+                locations = {
+                    name = "📍 Body Locations",
+                    content = [[
+Secret Training Port (City Port)
+
+Ice Bath - Need 100 BT 
+(x5 | Afk Farm: 380BT | Min Amount: 5 BT)
+
+Fire Bath - Need 10k BT 
+(x10 | Afk Farm: 38K BT | Min Amount 500 BT)
+
+Iceberg - Need 100k BT 
+(x20 | Afk Farm: 380K BT | Min Amount 5K BT)
+
+Tornado - Need 1M BT 
+(x50 | Afk Farm: 3.8M BT | Min Amount: 50K BT)
+
+Volcano - Need 10M BT 
+(x100 | Afk Farm: 38M BT | Min Amount: 500K BT)
+
+Body Toughness Training Areas (DST) - Need:
+
+Hell Fire Pit - Required Amount 1B BT 
+(x2k | Afk Farm: 3.8B BT | Min Amount: 50M BT)
+
+Green Acid Pool - Required Amount 100B 
+(x40k | Afk Farm: 360B BT | Min Amount: 5B BT)
+
+Red Acid Pool - Required Amount 10T 
+(x800k | Afk Farm: 38T BT | Min Amount: 500B BT)]]
+                },
+                farm = {
+                    name = "⚡ Body Farm Rates",
+                    content = [[
+Push-ups: 3,330.0 per hour
+
+The Ice Bath: 14,257.8125 per hour
+
+The Fire Bath: 28,515.625 per hour
+
+The Iceberg: 57,031.25 per hour
+
+The Tornado: 142,578.125 per hour
+
+The Volcano: 285,156.25 per hour
+
+The Hell Pit: 5,703,125.0 per hour
+
+The Green Acid Pool: 114,062,500.0 per hour
+
+The Red Acid Pool: 2,304,000,000.0 per hour]]
+                }
+            }
+        },
+        fist = {
+            name = "👊 FIST",
+            subsections = {
+                locations = {
+                    name = "📍 Fist Locations",
+                    content = [[
+The Rock - (x10) 
+
+The Crystal - Requires the Ability to Fly: (x100)
+
+Blue God Star - Requires 1B Fist Strength: (x2,000)
+
+Green God Star - Requires 100B Fist Strength: (x40,000)
+
+Red God Star - Requires 10T Fist Strength: (x800,000)]]
+                },
+                farm = {
+                    name = "⚡ Fist Farm Rates",
+                    content = [[
+Punching Air: 3,529.4 per hour
+
+Punching The Rock: 35,294.1 per hour
+
+Punching the Crystal: 352,941.2 per hour
+
+Punching the Blue God Star: 7,058,823.5 per hour
+
+Punching the Green God Star: 141,176,470.6 per hour
+
+Punching the Red God Star: 2,823,529,411.8 per hour]]
+                }
+            }
+        },
+        psychic = {
+            name = "🔮 PSYCHIC",
+            subsections = {
+                locations = {
+                    name = "📍 Psychic Locations",
+                    content = [[
+First Grass Lawn - Requires 1M PP (x100)
+
+Second Grass lawn - Requires 1B PP (x10k)
+
+The Bridge - Requires 1T PP (x1M)
+
+The Waterfall - Requires 1Qa PP (x100M)]]
+                },
+                farm = {
+                    name = "⚡ Psychic Farm Rates",
+                    content = [[
+Basic Meditation: 2,400.0 per hour
+
+Flying Meditation: 24,000.0 per hour
+
+The First Grass Lawn: 240,000.0 per hour
+
+The Second Grass Lawn: 24,000,000.0 per hour
+
+The Zen Temple Bridge: 2,400,000,000.0 per hour
+
+The Zen Temple Waterfall: 240,000,000,000.0 per hour]]
+                }
+            }
+        },
+        speed = {
+            name = "🏃 SPEED",
+            subsections = {
+                type = {
+                    name = "⚖️ Speed Weights",
+                    content = [[
+100 LB (x2) - 100 Movement Speed needed to use. (White Weights)
+
+1 TON (x5) - 5K Movement Speed needed to use. (Yellow Weights)
+
+10 TON (x10) - 500K Movement Speed needed to use. (Blue Weights)
+
+100 TON (x20) - 10M Movement Speed needed to use. (Red Weights)]]
+                }
+            }
+        },
+        jump = {
+            name = "🦘 JUMP",
+            subsections = {
+                type = {
+                    name = "⚖️ Jump Weights",
+                    content = [[
+100 LB (x2) - 5k Jump Force needed to use. (White Weights)
+
+1 TON (x5) - 200k Jump Force needed to use. (Yellow weights)
+
+10 TON (x10) - 2M Jump Force needed to use. (Blue weights)
+
+100 TON (x20) - 10M Jump Force needed to use. (Red weights)]]
+                }
+            }
+        },
+        quests = {
+            name = "📋 QUESTS",
+            subsections = {
+                quests = {
+                    name = "🎯 All Quests",
+                    content = [[
+Mainly Quest    Requirements    Reward
+
+1 Train Fist Strength - Required: 20     10 Tokens / 20 Tokens(VIP)
+Train Body Toughness - Required: 20     10 Tokens / 20 Tokens(VIP)
+
+2 Train Movement Speed - Required: 20    10 Tokens / 20 Tokens(VIP)
+Train Jump Force - Required: 20         10 Tokens / 20 Tokens(VIP)
+
+3 Train Psychic Power - Required: 100    50 Tokens / 100 Tokens(VIP)
+Unlocks Invisibility Skill
+
+4 Train Fist Strength - Required: 1,000  100 Tokens / 200 Tokens(VIP)
+Unlocks Energy Sphere Punch Skill
+
+5 Train Body Toughness - Required: 1,000 100 Tokens / 200 Tokens(VIP)
+Unlocks Damage Reflection
+
+6 Train Movement Speed - Required: 1000  100 Tokens / 200 Tokens(VIP)
+Train Psychic Power - Required: 1,000    100 Tokens / 200 Tokens(VIP)
+Unlocks Weights as the quest is received
+Unlock Water Run
+
+7 Train Jump Force - Required: 1,000     100 Tokens
+
+8 Train Movement Speed - Required: 10K   250 Tokens / 500 Tokens(VIP)
+Unlock Teleport Skill
+
+9 Train Psychic Power - Required: 10K    250 Tokens / 500 Tokens(VIP)
+Train Jump Force- Required: 10K          250 Tokens / 500 Tokens(VIP)
+Unlock Fly Skill
+
+10 Train Fist Strength - Required: 100K  500 Tokens / 1000 Tokens(VIP)
+Unlock Bullet Punch
+
+11 Train Psychic Power - Required: 100K  500 tokens / 1000 Tokens(VIP)
+Unlock Soul Attack
+
+12 Train Fist Strength - Required: 1M    1000 tokens / 2000 Tokens(VIP)
+Train Body Toughness - Required: 1M      1000 tokens / 2000 Tokens(VIP)
+Train Psychic Power - Required: 1M       1000 tokens / 2000 Tokens(VIP)
+Unlock Conceal/Reveal Aura
+
+13 Train Psychic Power - Required: 100M  2500 tokens / 5000 Tokens(VIP)
+Villains/Heroes killed - Required: 1000  2500 tokens / 5000 Tokens(VIP)
+Unlock Killing Intent]]
+                }
+            }
+        }
+    }
+end
+
+function WikiSystem:createGUI()
+    if self.plr.PlayerGui:FindFirstChild("WikiGUI") then
+        self.plr.PlayerGui.WikiGUI:Destroy()
+    end
+
+    self.gui = Utility.createUIElement("ScreenGui", {
+        Name = "WikiGUI",
+        ResetOnSpawn = false,
+        Parent = self.plr.PlayerGui
+    })
+
+    -- Main frame
+    local mainFrame = Utility.createStyledFrame("MainFrame",
+        UDim2.new(0, 800, 0, 600),
+        UDim2.new(0.5, -400, 0.5, -300),
+        self.gui
+    )
+    mainFrame.Visible = false
+    self.mainFrame = mainFrame
+
+    -- Title
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 60),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        Text = "📚 WIKI - GAME KNOWLEDGE BASE",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 20,
+        ZIndex = 12,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = mainFrame
+    })
+
+    -- Content container
+    local contentContainer = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, -20, 1, -80),
+        Position = UDim2.new(0, 10, 0, 70),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = mainFrame
+    })
+
+    -- Create sidebar and content areas
+    self:createSidebar(contentContainer)
+    self:createContentArea(contentContainer)
+    self:setupClickOutside()
+
+    return self
+end
+
+function WikiSystem:createSidebar(parent)
+    local sidebar = Utility.createUIElement("Frame", {
+        Size = UDim2.new(0, 180, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    -- Style sidebar
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = sidebar})
+    Utility.createUIElement("UIStroke", {
+        Color = Color3.new(1, 1, 1),
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = sidebar
+    })
+
+    -- Layout
+    Utility.createUIElement("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = sidebar
+    })
+
+    Utility.createUIElement("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        Parent = sidebar
+    })
+
+    -- Create section buttons
+    self:createSectionButtons(sidebar)
+end
+
+function WikiSystem:createSectionButtons(sidebar)
+    local sectionsOrder = {"body", "fist", "psychic", "speed", "jump", "quests"}
+    
+    for _, sectionKey in ipairs(sectionsOrder) do
+        local button = Utility.createUIElement("TextButton", {
+            Size = UDim2.new(1, 0, 0, 50),
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BackgroundTransparency = 0.2,
+            Text = self.wikiData[sectionKey].name,
+            TextColor3 = Color3.new(1, 1, 1),
+            TextSize = 16,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            LayoutOrder = table.find(sectionsOrder, sectionKey) or 0,
+            Parent = sidebar
+        })
+
+        -- Style button
+        Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
+        Utility.createUIElement("UIStroke", {
+            Color = Color3.new(1, 1, 1),
+            Thickness = 1.5,
+            Transparency = 0.5,
+            Parent = button
+        })
+
+        self.sectionButtons[sectionKey] = button
+
+        button.MouseButton1Click:Connect(function()
+            self:onSectionSelected(sectionKey, button)
+        end)
+    end
+end
+
+function WikiSystem:createContentArea(parent)
+    self.contentContainer = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, -200, 1, 0),
+        Position = UDim2.new(0, 190, 0, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Parent = parent
+    })
+
+    -- Style content area
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = self.contentContainer})
+    Utility.createUIElement("UIStroke", {
+        Color = Color3.new(1, 1, 1),
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = self.contentContainer
+    })
+end
+
+function WikiSystem:onSectionSelected(sectionKey, button)
+    -- Reset all buttons
+    for _, btn in pairs(self.sectionButtons) do
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        btn.BackgroundTransparency = 0.2
+    end
+
+    -- Highlight selected button
+    button.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+    button.BackgroundTransparency = 0.1
+
+    -- Show first subsection
+    local sectionData = self.wikiData[sectionKey]
+    local firstSubKey = next(sectionData.subsections)
+    
+    if firstSubKey then
+        self.currentSection = sectionKey
+        self.currentSubSection = firstSubKey
+        self:showSubsection(sectionKey, firstSubKey, sectionData.subsections[firstSubKey])
+    end
+end
+
+function WikiSystem:showSubsection(sectionKey, subKey, subData)
+    -- Clear previous content
+    for _, child in ipairs(self.contentContainer:GetChildren()) do
+        child:Destroy()
+    end
+
+    -- Add padding
+    Utility.createUIElement("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        PaddingLeft = UDim.new(0, 15),
+        PaddingRight = UDim.new(0, 15),
+        PaddingBottom = UDim.new(0, 10),
+        Parent = self.contentContainer
+    })
+
+    -- Subsection title
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 40),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BackgroundTransparency = 0.3,
+        Text = "  " .. subData.name,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 18,
+        ZIndex = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BorderSizePixel = 0,
+        Parent = self.contentContainer
+    })
+
+    -- Scrolling frame for content
+    local scrollFrame = Utility.createUIElement("ScrollingFrame", {
+        Size = UDim2.new(1, 0, 1, -50),
+        Position = UDim2.new(0, 0, 0, 45),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 8,
+        ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200),
+        ScrollBarImageTransparency = 0.5,
+        VerticalScrollBarInset = Enum.ScrollBarInset.Always,
+        ZIndex = 12,
+        Parent = self.contentContainer
+    })
+
+    -- Content text
+    local contentText = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = subData.content,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true,
+        Font = Enum.Font.Gotham,
+        ZIndex = 12,
+        Parent = scrollFrame
+    })
+
+    -- Calculate text size and adjust scrolling
+    task.wait(0.05)
+    RunService.RenderStepped:Wait()
+
+    local textSize = TextService:GetTextSize(
+        subData.content,
+        contentText.TextSize,
+        contentText.Font,
+        Vector2.new(scrollFrame.AbsoluteSize.X - 10, math.huge)
+    )
+
+    contentText.Size = UDim2.new(1, 0, 0, textSize.Y)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, textSize.Y)
+
+    -- Animate content appearance
+    self.contentContainer.Size = UDim2.new(0, 0, 1, 0)
+    self.contentContainer.Visible = true
+    
+    TweenService:Create(self.contentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(1, -200, 1, 0)
+    }):Play()
+end
+
+function WikiSystem:setupClickOutside()
+    local background = Utility.createUIElement("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Visible = false,
+        ZIndex = 0,
+        Parent = self.gui
+    })
+
+    -- Set high ZIndex for main elements
+    self.mainFrame.ZIndex = 10
+    self.contentContainer.ZIndex = 11
+    
+    for _, btn in pairs(self.sectionButtons) do
+        btn.ZIndex = 12
+    end
+
+    background.MouseButton1Click:Connect(function()
+        if self.isVisible then
+            self:toggle()
+        end
+    end)
+
+    self.mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        background.Visible = self.mainFrame.Visible
+    end)
+end
+
+function WikiSystem:toggle()
+    if self.isVisible then
+        local tween = TweenService:Create(self.mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        })
+        tween:Play()
+        tween.Completed:Wait()
+        self.mainFrame.Visible = false
+    else
+        -- Reset selection
+        for _, btn in pairs(self.sectionButtons) do
+            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            btn.BackgroundTransparency = 0.2
+        end
+        self.currentSection = nil
+        self.currentSubSection = nil
+        
+        self.mainFrame.Visible = true
+        self.mainFrame.Size = UDim2.new(0, 0, 0, 0)
+        local tween = TweenService:Create(self.mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 800, 0, 600)
+        })
+        tween:Play()
+    end
+    
+    self.isVisible = not self.isVisible
+end
+
+return WikiSystem
