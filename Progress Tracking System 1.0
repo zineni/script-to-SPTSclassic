@@ -1,0 +1,353 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local Utility = require(script.Parent.Utility)
+
+local ProgressSystem = {}
+ProgressSystem.__index = ProgressSystem
+
+function ProgressSystem.new()
+    local self = setmetatable({}, ProgressSystem)
+    self.plr = Players.LocalPlayer
+    self.gui = nil
+    self.isVisible = false
+    self.trackingActive = false
+    self.startStats = {}
+    self.endStats = {}
+    self.startTime = 0
+    self.elapsedTime = 0
+    self.timeConnection = nil
+    self.statRows = {}
+    
+    return self
+end
+
+function ProgressSystem:createGUI()
+    if self.plr.PlayerGui:FindFirstChild("ProgressGUI") then
+        self.plr.PlayerGui.ProgressGUI:Destroy()
+    end
+
+    self.gui = Utility.createUIElement("ScreenGui", {
+        Name = "ProgressGUI",
+        ResetOnSpawn = false,
+        Parent = self.plr.PlayerGui
+    })
+
+    -- Main frame
+    local mainFrame = Utility.createStyledFrame("MainFrame",
+        UDim2.new(0, 400, 0, 500),
+        UDim2.new(0.5, -200, 0.5, -250),
+        self.gui
+    )
+    mainFrame.Visible = false
+    self.mainFrame = mainFrame
+
+    -- Title
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 60),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        Text = "PROGRESS TRACKING",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = mainFrame
+    })
+
+    -- Time info
+    self.timeLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 40),
+        Position = UDim2.new(0, 10, 0, 65),
+        BackgroundTransparency = 1,
+        Text = "Time: 00:00",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        Parent = mainFrame
+    })
+
+    -- Status label
+    self.statusLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 30),
+        Position = UDim2.new(0, 10, 0, 105),
+        BackgroundTransparency = 1,
+        Text = "Status: Not active",
+        TextColor3 = Color3.new(1, 0.5, 0.5),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        Parent = mainFrame
+    })
+
+    -- Stats container
+    local statsContainer = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, -20, 0, 280),
+        Position = UDim2.new(0, 10, 0, 150),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = mainFrame
+    })
+
+    -- Create stat rows
+    self:createStatRows(statsContainer)
+    self:createControlButtons(mainFrame)
+    self:setupClickOutside()
+
+    return self
+end
+
+function ProgressSystem:createStatRows(container)
+    local statConfigs = {
+        {name = "Fist Strength", key = "fs", position = 0},
+        {name = "Psychic Power", key = "pp", position = 55},
+        {name = "Jump Force", key = "jf", position = 110},
+        {name = "Movement Speed", key = "ms", position = 165},
+        {name = "Body Toughness", key = "bt", position = 220}
+    }
+
+    for _, config in ipairs(statConfigs) do
+        self.statRows[config.key] = self:createStatRow(container, config.name, config.position)
+    end
+end
+
+function ProgressSystem:createStatRow(parent, statName, yPosition)
+    local rowFrame = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, 0, 0, 50),
+        Position = UDim2.new(0, 0, 0, yPosition),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    -- Stat name
+    Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = statName,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.GothamBold,
+        Parent = rowFrame
+    })
+
+    -- Start value
+    local startLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(0.45, 0, 0, 15),
+        Position = UDim2.new(0, 0, 0, 25),
+        BackgroundTransparency = 1,
+        Text = "Start: N/A",
+        TextColor3 = Color3.new(0.7, 0.7, 0.7),
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        Parent = rowFrame
+    })
+
+    -- End value
+    local endLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(0.45, 0, 0, 15),
+        Position = UDim2.new(0.55, 0, 0, 25),
+        BackgroundTransparency = 1,
+        Text = "End: N/A",
+        TextColor3 = Color3.new(0.7, 0.7, 0.7),
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        Parent = rowFrame
+    })
+
+    -- Difference
+    local diffLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 15),
+        Position = UDim2.new(0, 0, 0, 40),
+        BackgroundTransparency = 1,
+        Text = "Difference: -",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.GothamBold,
+        Parent = rowFrame
+    })
+
+    return {
+        startLabel = startLabel,
+        endLabel = endLabel,
+        diffLabel = diffLabel
+    }
+end
+
+function ProgressSystem:createControlButtons(parent)
+    local buttonFrame = Utility.createUIElement("Frame", {
+        Size = UDim2.new(1, -20, 0, 40),
+        Position = UDim2.new(0, 10, 1, -50),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    local buttons = {
+        {name = "START", color = Color3.new(0.2, 0.7, 0.2), position = 0, callback = function() self:startTracking() end},
+        {name = "STOP", color = Color3.new(0.8, 0.5, 0.1), position = 0.35, callback = function() self:stopTracking() end},
+        {name = "CLOSE", color = Color3.new(0.8, 0.2, 0.2), position = 0.7, callback = function() self:toggle() end}
+    }
+
+    for _, btnConfig in ipairs(buttons) do
+        local button = Utility.createUIElement("TextButton", {
+            Size = UDim2.new(0.3, -5, 1, 0),
+            Position = UDim2.new(btnConfig.position, 0, 0, 0),
+            BackgroundColor3 = btnConfig.color,
+            BackgroundTransparency = 0.2,
+            Text = btnConfig.name,
+            TextColor3 = Color3.new(1, 1, 1),
+            TextSize = 14,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            Parent = buttonFrame
+        })
+
+        -- Style button
+        Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
+        Utility.createUIElement("UIStroke", {
+            Color = Color3.new(1, 1, 1),
+            Thickness = 1.5,
+            Transparency = 0.5,
+            Parent = button
+        })
+
+        button.MouseButton1Click:Connect(btnConfig.callback)
+    end
+end
+
+function ProgressSystem:formatTime(seconds)
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    
+    if hours > 0 then
+        return string.format("%02d:%02d:%02d", hours, minutes, secs)
+    else
+        return string.format("%02d:%02d", minutes, secs)
+    end
+end
+
+function ProgressSystem:updateTime()
+    if self.trackingActive then
+        self.elapsedTime = os.time() - self.startTime
+        self.timeLabel.Text = "Time: " .. self:formatTime(self.elapsedTime)
+    end
+end
+
+function ProgressSystem:startTracking()
+    self.startStats = Utility.getAllStats()
+    self.startTime = os.time()
+    self.trackingActive = true
+    self.elapsedTime = 0
+    
+    self.statusLabel.Text = "Status: Active"
+    self.statusLabel.TextColor3 = Color3.new(0.5, 1, 0.5)
+    self.timeLabel.Text = "Time: 00:00"
+    
+    -- Update start values
+    local statKeys = {"fs", "pp", "jf", "ms", "bt"}
+    local statNames = {"FistStrength", "PsychicPower", "JumpForce", "MovementSpeed", "BodyToughness"}
+    
+    for i, key in ipairs(statKeys) do
+        self.statRows[key].startLabel.Text = "Start: " .. self.startStats[statNames[i]]
+        self.statRows[key].endLabel.Text = "End: N/A"
+        self.statRows[key].diffLabel.Text = "Difference: -"
+        self.statRows[key].diffLabel.TextColor3 = Color3.new(1, 1, 1)
+    end
+    
+    -- Start time update
+    if self.timeConnection then
+        self.timeConnection:Disconnect()
+    end
+    self.timeConnection = RunService.Heartbeat:Connect(function()
+        self:updateTime()
+    end)
+end
+
+function ProgressSystem:stopTracking()
+    if not self.trackingActive then return end
+    
+    self.endStats = Utility.getAllStats()
+    self.trackingActive = false
+    
+    self.statusLabel.Text = "Status: Completed"
+    self.statusLabel.TextColor3 = Color3.new(1, 1, 0.5)
+    
+    -- Update end values and differences
+    local statKeys = {"fs", "pp", "jf", "ms", "bt"}
+    local statNames = {"FistStrength", "PsychicPower", "JumpForce", "MovementSpeed", "BodyToughness"}
+    
+    for i, key in ipairs(statKeys) do
+        self.statRows[key].endLabel.Text = "End: " .. self.endStats[statNames[i]]
+        
+        local diff, color = Utility.formatDifference(
+            self.startStats[statNames[i]], 
+            self.endStats[statNames[i]]
+        )
+        
+        self.statRows[key].diffLabel.Text = "Difference: " .. diff
+        self.statRows[key].diffLabel.TextColor3 = color
+    end
+    
+    -- Stop time update
+    if self.timeConnection then
+        self.timeConnection:Disconnect()
+        self.timeConnection = nil
+    end
+end
+
+function ProgressSystem:setupClickOutside()
+    local background = Utility.createUIElement("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Visible = false,
+        Parent = self.gui
+    })
+
+    background.MouseButton1Click:Connect(function()
+        if self.isVisible then
+            self:toggle()
+        end
+    end)
+
+    self.mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        background.Visible = self.mainFrame.Visible
+    end)
+end
+
+function ProgressSystem:toggle()
+    if self.isVisible then
+        local tween = TweenService:Create(self.mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        })
+        tween:Play()
+        tween.Completed:Wait()
+        self.mainFrame.Visible = false
+    else
+        self.mainFrame.Visible = true
+        self.mainFrame.Size = UDim2.new(0, 0, 0, 0)
+        local tween = TweenService:Create(self.mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 400, 0, 500)
+        })
+        tween:Play()
+    end
+    
+    self.isVisible = not self.isVisible
+end
+
+function ProgressSystem:isTracking()
+    return self.trackingActive
+end
+
+return ProgressSystem
