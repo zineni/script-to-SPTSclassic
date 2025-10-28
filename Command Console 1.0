@@ -1,0 +1,327 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local Utility = require(script.Parent.Utility)
+
+local CommandConsole = {}
+CommandConsole.__index = CommandConsole
+
+function CommandConsole.new()
+    local self = setmetatable({}, CommandConsole)
+    self.plr = Players.LocalPlayer
+    self.gui = nil
+    self.isExpanded = false
+    self.history = {}
+    self.historyIndex = 0
+    self.systems = {}
+    
+    return self
+end
+
+function CommandConsole:init(systems)
+    self.systems = systems
+    
+    if self.plr.PlayerGui:FindFirstChild("CommandConsole") then
+        self.plr.PlayerGui.CommandConsole:Destroy()
+    end
+
+    self.gui = Utility.createUIElement("ScreenGui", {
+        Name = "CommandConsole",
+        ResetOnSpawn = false,
+        Parent = self.plr.PlayerGui
+    })
+
+    self:createInterface()
+    self:setupHotkeys()
+
+    return self
+end
+
+function CommandConsole:createInterface()
+    -- Input TextBox
+    self.textBox = Utility.createUIElement("TextBox", {
+        Size = UDim2.new(0, 200, 0, 43),
+        Position = UDim2.new(0.5, -100, 1, -109),
+        PlaceholderText = "Enter command...",
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.2,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Visible = false,
+        Parent = self.gui
+    })
+
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = self.textBox})
+
+    -- OK Button
+    self.okButton = Utility.createUIElement("TextButton", {
+        Size = UDim2.new(0, 80, 0, 43),
+        Position = UDim2.new(0.5, 20, 1, -109),
+        Text = "OK",
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.2,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Visible = false,
+        Parent = self.gui
+    })
+
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = self.okButton})
+
+    -- Output Frame
+    self.outputFrame = Utility.createUIElement("Frame", {
+        Size = UDim2.new(0, 350, 0, 0),
+        Position = UDim2.new(0, 20, 1, -200),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        Visible = false,
+        ClipsDescendants = true,
+        Parent = self.gui
+    })
+
+    Utility.createUIElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = self.outputFrame})
+    Utility.createUIElement("UIStroke", {
+        Color = Color3.new(1, 1, 1),
+        Thickness = 2,
+        Transparency = 0.7,
+        Parent = self.outputFrame
+    })
+
+    -- Output Label
+    self.outputLabel = Utility.createUIElement("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 0),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true,
+        Font = Enum.Font.Gotham,
+        Text = "",
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Parent = self.outputFrame
+    })
+
+    -- Set up interactions
+    self:setupInteractions()
+end
+
+function CommandConsole:setupInteractions()
+    self.okButton.MouseButton1Click:Connect(function()
+        self:processCommand(self.textBox.Text)
+        self.textBox.Text = ""
+    end)
+
+    self.textBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            self:processCommand(self.textBox.Text)
+            self.textBox.Text = ""
+        end
+    end)
+end
+
+function CommandConsole:setupHotkeys()
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        
+        if input.KeyCode == Enum.KeyCode.F2 then
+            self:toggleInterface()
+            if self.isExpanded then
+                self.textBox:CaptureFocus()
+            end
+        elseif input.KeyCode == Enum.KeyCode.Escape then
+            if self.isExpanded then
+                self:toggleInterface()
+            end
+        end
+    end)
+end
+
+function CommandConsole:showOutput(text, duration)
+    duration = duration or 20
+    
+    self.outputLabel.Text = tostring(text or "")
+    
+    task.wait(0.05)
+    
+    local textHeight = self.outputLabel.TextBounds.Y
+    local frameHeight = math.min(textHeight + 20, 600)
+    
+    self.outputFrame.Size = UDim2.new(0, 350, 0, 0)
+    self.outputFrame.Position = UDim2.new(0, 20, 1, -200)
+    self.outputFrame.Visible = true
+    
+    local tween = TweenService:Create(self.outputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 350, 0, frameHeight),
+        Position = UDim2.new(0, 20, 1, -200 - frameHeight)
+    })
+    tween:Play()
+    
+    task.delay(duration, function()
+        if self.outputFrame.Visible then
+            local hideTween = TweenService:Create(self.outputFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 350, 0, 0),
+                Position = UDim2.new(0, 20, 1, -200)
+            })
+            hideTween:Play()
+            hideTween.Completed:Wait()
+            self.outputFrame.Visible = false
+        end
+    end)
+end
+
+function CommandConsole:toggleInterface()
+    if self.isExpanded then
+        -- Collapse
+        local tween1 = TweenService:Create(self.textBox, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 43)
+        })
+        local tween2 = TweenService:Create(self.okButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 43)
+        })
+        
+        tween1:Play()
+        tween2:Play()
+        
+        tween1.Completed:Connect(function()
+            self.textBox.Visible = false
+            self.okButton.Visible = false
+        end)
+    else
+        -- Expand
+        self.textBox.Visible = true
+        self.okButton.Visible = true
+        
+        self.textBox.Size = UDim2.new(0, 0, 0, 43)
+        self.okButton.Size = UDim2.new(0, 0, 0, 43)
+        
+        local tween1 = TweenService:Create(self.textBox, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 180, 0, 43),
+            Position = UDim2.new(0.5, -118, 1, -109)
+        })
+        local tween2 = TweenService:Create(self.okButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 60, 0, 43),
+            Position = UDim2.new(0.5, 58, 1, -109)
+        })
+        
+        tween1:Play()
+        tween2:Play()
+    end
+    
+    self.isExpanded = not self.isExpanded
+end
+
+function CommandConsole:processCommand(command)
+    if command == "" then return end
+    
+    local lowerCommand = command:lower()
+    
+    -- Add to history
+    table.insert(self.history, command)
+    self.historyIndex = #self.history + 1
+    
+    -- Command routing
+    if lowerCommand == "help" then
+        self:showHelp()
+    elseif lowerCommand == "clear" then
+        self.outputLabel.Text = ""
+        self:showOutput("🧹 Output cleared", 3)
+    else
+        self:routeCommand(lowerCommand, command)
+    end
+end
+
+function CommandConsole:showHelp()
+    local helpText = [[
+📚 AVAILABLE COMMANDS:
+
+📊 MAIN:
+stats - Open statistics panel
+ts - Start progress tracking  
+tss - Stop progress tracking
+tsg - Open progress panel
+wiki - Open wiki
+clear - Clear output
+
+👁️ ESP:
+esp on - Enable ESP
+esp off - Disable ESP
+esp toggle - Toggle ESP
+players - Show player list
+tp @Name - Teleport to player
+
+👊 FIST TRAINING:
+fs on - Enable fist autofarm
+fs off - Disable fist autofarm
+rock - Teleport to Rock
+crystal - Teleport to Crystal
+bluegod - Teleport to Blue God Star
+greengod - Teleport to Green God Star
+redgod - Teleport to Red God Star
+
+🛡️ BODY TRAINING:
+bt on - Enable body autotrain
+bt off - Disable body autotrain
+
+⚡ AUTO SYSTEMS:
+autotp on - Enable auto-return
+autotp off - Disable auto-return
+
+Press F2 to open/close console
+Press ESC to close console
+]]
+    
+    self:showOutput(helpText)
+end
+
+function CommandConsole:routeCommand(lowerCommand, originalCommand)
+    -- Stats commands
+    if lowerCommand == "stats" then
+        self.systems.statsSystem:toggle()
+        self:showOutput("📊 Opening statistics...", 3)
+    elseif lowerCommand == "ts" then
+        self.systems.progressSystem:startTracking()
+        self:showOutput("📈 Starting progress tracking", 3)
+    elseif lowerCommand == "tss" then
+        self.systems.progressSystem:stopTracking()
+        self:showOutput("📉 Stopping tracking", 3)
+    elseif lowerCommand == "tsg" then
+        self.systems.progressSystem:toggle()
+        self:showOutput("📊 Opening progress panel", 3)
+    elseif lowerCommand == "wiki" then
+        self.systems.wikiSystem:toggle()
+        self:showOutput("📚 Wiki: " .. (self.systems.wikiSystem.isVisible and "opened" or "closed"), 3)
+    
+    -- ESP commands
+    elseif lowerCommand == "esp on" then
+        self.systems.espSystem:enable()
+    elseif lowerCommand == "esp off" then
+        self.systems.espSystem:disable()
+    elseif lowerCommand == "esp toggle" then
+        self.systems.espSystem:toggle()
+    elseif lowerCommand == "players" then
+        self:showOutput(self.systems.espSystem:getPlayerList())
+    elseif lowerCommand:sub(1, 4) == "tp @" then
+        local playerName = lowerCommand:sub(5)
+        if playerName and playerName ~= "" then
+            self.systems.espSystem:teleportToPlayerByName(playerName)
+        else
+            self:showOutput("❌ Specify player name: tp @PlayerName", 5)
+        end
+    
+    -- Add more command routing as needed
+    
+    else
+        self:showOutput("❌ Unknown command: " .. originalCommand .. "\nType 'help' for command list.", 5)
+    end
+end
+
+return CommandConsole
