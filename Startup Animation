@@ -1,0 +1,331 @@
+-- ==============================
+-- === STARTUP ANIMATION ===
+-- ==============================
+local function createStartupAnimation()
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+    local plr = Players.LocalPlayer
+
+    -- Create main GUI for animation
+    local StartupGUI = Instance.new("ScreenGui")
+    StartupGUI.Name = "StartupAnimation"
+    StartupGUI.Parent = plr.PlayerGui
+    StartupGUI.ResetOnSpawn = false
+    StartupGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    -- Dark semi-transparent background (full screen)
+    local Background = Instance.new("Frame")
+    Background.Name = "Background"
+    Background.Size = UDim2.new(1, 0, 1, 0)
+    Background.Position = UDim2.new(0, 0, 0, 0)
+    Background.BackgroundColor3 = Color3.new(0, 0, 0)
+    Background.BackgroundTransparency = 0.15
+    Background.BorderSizePixel = 0
+    Background.ZIndex = 100
+    Background.Parent = StartupGUI
+
+    -- Main container for all content
+    local MainContainer = Instance.new("Frame")
+    MainContainer.Name = "MainContainer"
+    MainContainer.Size = UDim2.new(0, 500, 0, 400)
+    MainContainer.Position = UDim2.new(0.5, -250, 1, 0) -- Start position - from bottom
+    MainContainer.BackgroundColor3 = Color3.new(0, 0, 0)
+    MainContainer.BackgroundTransparency = 0.15
+    MainContainer.BorderSizePixel = 0
+    MainContainer.ZIndex = 101
+    MainContainer.Parent = StartupGUI
+
+    -- Round main container corners
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 12)
+    MainCorner.Parent = MainContainer
+
+    -- White border
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Color = Color3.new(1, 1, 1)
+    MainStroke.Thickness = 2
+    MainStroke.Transparency = 0.7
+    MainStroke.Parent = MainContainer
+
+    -- Title
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "TitleLabel"
+    TitleLabel.Size = UDim2.new(1, 0, 0, 60)
+    TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+    TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+    TitleLabel.BackgroundTransparency = 0.3
+    TitleLabel.Text = "SCRIPT INITIALIZATION"
+    TitleLabel.TextColor3 = Color3.new(1, 1, 1)
+    TitleLabel.TextSize = 20
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.BorderSizePixel = 0
+    TitleLabel.ZIndex = 102
+    TitleLabel.Parent = MainContainer
+
+    -- Round title corners
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.Parent = TitleLabel
+    TitleCorner.CornerRadius = UDim.new(0, 12)
+
+    -- Container for text
+    local TextContent = Instance.new("Frame")
+    TextContent.Name = "TextContent"
+    TextContent.Size = UDim2.new(1, -40, 0, 180)
+    TextContent.Position = UDim2.new(0, 20, 0, 80)
+    TextContent.BackgroundTransparency = 1
+    TextContent.BorderSizePixel = 0
+    TextContent.ZIndex = 102
+    TextContent.Parent = MainContainer
+
+    -- First line: "Hi"
+    local HiText = Instance.new("TextLabel")
+    HiText.Name = "HiText"
+    HiText.Size = UDim2.new(1, 0, 0, 50)
+    HiText.Position = UDim2.new(0, 0, 0, 0)
+    HiText.BackgroundTransparency = 1
+    HiText.Text = "Hi"
+    HiText.TextColor3 = Color3.new(1, 1, 1)
+    HiText.TextSize = 32
+    HiText.Font = Enum.Font.GothamBold
+    HiText.TextTransparency = 1
+    HiText.ZIndex = 103
+    HiText.Parent = TextContent
+
+    -- Second line: author
+    local AuthorText = Instance.new("TextLabel")
+    AuthorText.Name = "AuthorText"
+    AuthorText.Size = UDim2.new(1, 0, 0, 40)
+    AuthorText.Position = UDim2.new(0, 0, 0, 60)
+    AuthorText.BackgroundTransparency = 1
+    AuthorText.Text = "script creator vlad431922 | theholyhol"
+    AuthorText.TextColor3 = Color3.new(1, 1, 1)
+    AuthorText.TextSize = 16
+    AuthorText.Font = Enum.Font.Gotham
+    AuthorText.TextTransparency = 1
+    AuthorText.ZIndex = 103
+    AuthorText.Parent = TextContent
+
+    -- Third line: wish
+    local WishText = Instance.new("TextLabel")
+    WishText.Name = "WishText"
+    WishText.Size = UDim2.new(1, 0, 0, 40)
+    WishText.Position = UDim2.new(0, 0, 0, 110)
+    WishText.BackgroundTransparency = 1
+    WishText.Text = "I hope you can level up with this script)"
+    WishText.TextColor3 = Color3.new(1, 1, 1)
+    WishText.TextSize = 14
+    WishText.Font = Enum.Font.Gotham
+    WishText.TextTransparency = 1
+    WishText.ZIndex = 103
+    WishText.Parent = TextContent
+
+    -- Loading bar container
+    local LoadingSection = Instance.new("Frame")
+    LoadingSection.Name = "LoadingSection"
+    LoadingSection.Size = UDim2.new(1, -40, 0, 100)
+    LoadingSection.Position = UDim2.new(0, 20, 0, 280)
+    LoadingSection.BackgroundColor3 = Color3.new(0, 0, 0)
+    LoadingSection.BackgroundTransparency = 0.2
+    LoadingSection.BorderSizePixel = 0
+    LoadingSection.Visible = false
+    LoadingSection.ZIndex = 102
+    LoadingSection.Parent = MainContainer
+
+    -- Round loading section corners
+    local LoadingCorner = Instance.new("UICorner")
+    LoadingCorner.CornerRadius = UDim.new(0, 8)
+    LoadingCorner.Parent = LoadingSection
+
+    -- Loading section border
+    local LoadingStroke = Instance.new("UIStroke")
+    LoadingStroke.Color = Color3.new(1, 1, 1)
+    LoadingStroke.Thickness = 1.5
+    LoadingStroke.Transparency = 0.5
+    LoadingStroke.Parent = LoadingSection
+
+    -- "Loading features..." text
+    local LoadingText = Instance.new("TextLabel")
+    LoadingText.Name = "LoadingText"
+    LoadingText.Size = UDim2.new(1, -20, 0, 25)
+    LoadingText.Position = UDim2.new(0, 10, 0, 10)
+    LoadingText.BackgroundTransparency = 1
+    LoadingText.Text = "Initializing systems..."
+    LoadingText.TextColor3 = Color3.new(1, 1, 1)
+    LoadingText.TextSize = 14
+    LoadingText.Font = Enum.Font.Gotham
+    LoadingText.TextXAlignment = Enum.TextXAlignment.Left
+    LoadingText.ZIndex = 103
+    LoadingText.Parent = LoadingSection
+
+    -- Loading bar background
+    local LoadingBarBackground = Instance.new("Frame")
+    LoadingBarBackground.Name = "LoadingBarBackground"
+    LoadingBarBackground.Size = UDim2.new(1, -20, 0, 20)
+    LoadingBarBackground.Position = UDim2.new(0, 10, 0, 45)
+    LoadingBarBackground.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+    LoadingBarBackground.BackgroundTransparency = 0.3
+    LoadingBarBackground.BorderSizePixel = 0
+    LoadingBarBackground.ZIndex = 103
+    LoadingBarBackground.Parent = LoadingSection
+
+    -- Round bar background corners
+    local BarBgCorner = Instance.new("UICorner")
+    BarBgCorner.CornerRadius = UDim.new(0, 8)
+    BarBgCorner.Parent = LoadingBarBackground
+
+    -- Loading bar itself
+    local LoadingBar = Instance.new("Frame")
+    LoadingBar.Name = "LoadingBar"
+    LoadingBar.Size = UDim2.new(0, 0, 1, 0)
+    LoadingBar.Position = UDim2.new(0, 0, 0, 0)
+    LoadingBar.BackgroundColor3 = Color3.new(0.2, 0.4, 0.8)
+    LoadingBar.BorderSizePixel = 0
+    LoadingBar.ZIndex = 104
+    LoadingBar.Parent = LoadingBarBackground
+
+    -- Round bar corners
+    local BarCorner = Instance.new("UICorner")
+    BarCorner.CornerRadius = UDim.new(0, 8)
+    BarCorner.Parent = LoadingBar
+
+    -- Loading percentage
+    local PercentText = Instance.new("TextLabel")
+    PercentText.Name = "PercentText"
+    PercentText.Size = UDim2.new(1, -20, 0, 20)
+    PercentText.Position = UDim2.new(0, 10, 0, 70)
+    PercentText.BackgroundTransparency = 1
+    PercentText.Text = "0%"
+    PercentText.TextColor3 = Color3.new(1, 1, 1)
+    PercentText.TextSize = 14
+    PercentText.Font = Enum.Font.GothamBold
+    PercentText.TextXAlignment = Enum.TextXAlignment.Right
+    PercentText.ZIndex = 103
+    PercentText.Parent = LoadingSection
+
+    -- Animation play function
+    local function playStartupAnimation()
+        -- Stage 1: Rise main container from bottom
+        local riseTween = TweenService:Create(MainContainer, TweenInfo.new(1.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, -250, 0.5, -200) -- Center of screen
+        })
+        riseTween:Play()
+        
+        -- Stage 2: Text appearance with delay
+        task.wait(0.8)
+        
+        -- "Hi" appearance
+        local hiTween = TweenService:Create(HiText, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+            TextTransparency = 0
+        })
+        hiTween:Play()
+        
+        task.wait(0.4)
+        
+        -- Author appearance
+        local authorTween = TweenService:Create(AuthorText, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+            TextTransparency = 0
+        })
+        authorTween:Play()
+        
+        task.wait(0.4)
+        
+        -- Wish appearance
+        local wishTween = TweenService:Create(WishText, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+            TextTransparency = 0
+        })
+        wishTween:Play()
+        
+        -- Wait before loading
+        task.wait(1.2)
+        
+        -- Stage 3: Show loading section
+        LoadingSection.Visible = true
+        LoadingSection.Size = UDim2.new(1, -40, 0, 0) -- Initial height 0
+        
+        -- Loading section appearance animation
+        local loadingAppear = TweenService:Create(LoadingSection, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, -40, 0, 100)
+        })
+        loadingAppear:Play()
+        
+        -- Stage 4: Fake feature loading
+        local features = {
+            "Loading statistics system...",
+            "Initializing ESP module...", 
+            "Preparing autofarm features...",
+            "Setting up command console...",
+            "Loading wiki database...",
+            "Configuring progress tracker...",
+            "Finalizing interface...",
+            "Ready to use!"
+        }
+        
+        local featureWeights = {12, 18, 22, 15, 13, 10, 5, 5}
+        
+        local totalProgress = 0
+        local loadingTime = 4 -- Total loading time
+        
+        for i, feature in ipairs(features) do
+            LoadingText.Text = feature
+            
+            -- Progress animation for this feature
+            local targetProgress = totalProgress + featureWeights[i]
+            local stepTime = (featureWeights[i] / 100) * loadingTime
+            
+            local startTime = tick()
+            while tick() - startTime < stepTime do
+                local elapsed = tick() - startTime
+                local progress = totalProgress + (featureWeights[i] * (elapsed / stepTime))
+                
+                -- Update bar
+                LoadingBar.Size = UDim2.new(progress / 100, 0, 1, 0)
+                PercentText.Text = string.format("%d%%", math.floor(progress))
+                
+                RunService.Heartbeat:Wait()
+            end
+            
+            totalProgress = targetProgress
+            
+            -- Random pauses for realism
+            if math.random(1, 3) == 1 then
+                task.wait(0.1)
+            end
+        end
+        
+        -- Final update to 100%
+        LoadingBar.Size = UDim2.new(1, 0, 1, 0)
+        PercentText.Text = "100%"
+        LoadingText.Text = "All systems loaded successfully!"
+        
+        -- Final accent
+        task.wait(0.5)
+        LoadingBar.BackgroundColor3 = Color3.new(0.3, 0.8, 0.3) -- Green when complete
+        
+        -- Stage 5: Disappearance
+        task.wait(1.2)
+        
+        -- All content disappearance
+        local fadeContent = TweenService:Create(MainContainer, TweenInfo.new(0.7), {
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0.5, -250, 1.5, 0) -- Moves down
+        })
+        fadeContent:Play()
+        
+        -- Background disappearance
+        task.wait(0.3)
+        local fadeBackground = TweenService:Create(Background, TweenInfo.new(0.8), {
+            BackgroundTransparency = 1
+        })
+        fadeBackground:Play()
+        
+        -- Remove GUI after animation
+        fadeBackground.Completed:Wait()
+        StartupGUI:Destroy()
+    end
+
+    -- Start animation
+    playStartupAnimation()
+    
+    return StartupGUI
+end
